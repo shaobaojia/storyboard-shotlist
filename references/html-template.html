@@ -1,0 +1,110 @@
+<!-- storyboard-shotlist v2 HTML 模板骨架
+  10 列：镜号 | 运镜 | 空间关系 | 摄影机 | 机位 | 动作调度 | 台词 | 时长 | 音频 | 导演备注
+  阅读流：运镜+空间="画面里有什么，动不动" → 摄影机+机位="什么镜头" → 动作+台词="干什么说什么"
+
+  可视化标记：
+    摄影机列 — 景别★(上) + 焦段·景深(下, .lens-tech 11px/opacity.35)
+    机位列 — 五色 emoji + 单字（🔴正 🟡反 🟢三 🔵环 🟣插），口诀：正反三环插
+    空间关系列 — [位置标签]👤emoji + <br>分行，行序 后→中→前 / 上→中→下
+    音频列 — 音乐(金#fbbf24 .audio-music)在上，音效(灰蓝#94a3b8 .audio-sfx)在下，仅音效时省略音乐行
+
+  EDL 暗调配色（NLE 剪辑台风）：
+    --bg:#2b2b2b --card:#222222 --border:#222222 --text:#e0e0e0 --head:#e0e0e0
+    --row-light:#3a3a3a --row-dark:#333333 交替行亮度差 7 单位
+
+  节拍分组色标：⚪ 填充 = beat-dot（灰）/ 🔴 戏点 = beat-red（红）
+  配色：台词 c-dialogue（黄 #fbbf24）| 时长 c-dur（绿 #22c55e）| 音频 .audio-music（金 #fbbf24）/ .audio-sfx（灰蓝 #94a3b8）
+  nowrap：镜号(1) 运镜(2) 摄影机(4) 机位(5) 时长(8)
+-->
+
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>分镜脚本 — s{场次号} {场次名}</title>
+<style>
+:root{--bg:#2b2b2b;--card:#222222;--border:#222222;--text:#e0e0e0;--head:#e0e0e0;--accent:#f43f5e;--green:#22c55e;--row-light:#3a3a3a;--row-dark:#333333}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font:15px/1.6 -apple-system,BlinkMacSystemFont,sans-serif}
+.container{width:100%;padding:24px 32px}
+.top{padding:32px 0 24px;border-bottom:1px solid var(--border);margin-bottom:24px}
+.top h1{color:var(--head);font-size:24px;font-weight:700}
+.top h1 span{color:var(--accent)}
+.sub{color:var(--text);font-size:14px;margin-top:6px}
+.stats{display:flex;gap:32px;margin-top:18px}
+.stat .v{font-size:28px;font-weight:800;color:var(--head)}
+.stat .l{font-size:11px;color:var(--text);text-transform:uppercase;letter-spacing:.5px}
+.meta-bar{display:flex;gap:24px;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--border);margin-bottom:20px;font-size:14px}
+.meta-bar span{color:var(--text)}
+.meta-bar b{color:var(--head)}
+.beat-intent{font-size:13px;color:var(--green);margin-top:6px;font-style:italic}
+
+.table-wrap{overflow-x:auto;border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px}
+table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:13px}
+
+col.c1{width:42px}col.c2{width:72px}col.c3{width:160px}col.c4{width:110px}col.c5{width:90px}col.c6{width:auto}col.c7{width:140px}col.c8{width:44px}col.c9{width:120px}col.c10{width:180px}
+
+thead th{background:var(--card);color:var(--head);padding:10px 6px;text-align:left;font-weight:600;font-size:12px;white-space:nowrap;position:sticky;top:0;z-index:1;border-bottom:2px solid var(--accent)}
+tbody td{padding:8px 6px;border-bottom:1px solid var(--border);vertical-align:top;word-break:break-word}
+tbody tr:nth-child(odd){background:var(--row-light)}tbody tr:nth-child(even){background:var(--row-dark)}
+tbody tr:hover{background:rgba(244,63,94,.08)}
+
+tbody td:nth-child(1){white-space:nowrap}tbody td:nth-child(2){white-space:nowrap}tbody td:nth-child(4){white-space:nowrap}tbody td:nth-child(5){white-space:nowrap}tbody td:nth-child(8){white-space:nowrap}
+
+.lens-tech{font-size:11px;color:var(--text);opacity:.35}
+
+.c-num{color:var(--accent);font-weight:700;text-align:center}
+.c-dur{text-align:center;white-space:nowrap;color:var(--green)}
+.c-dialogue{color:#fbbf24}
+.audio-music{color:#fbbf24;font-size:12px}
+.audio-sfx{color:#94a3b8;font-size:11px}
+.c-notes{color:var(--text);font-size:12px}
+
+.beat-section{margin-bottom:32px}
+.beat-label{display:inline-block;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:700;margin-right:8px}
+.beat-dot{background:var(--row-light);color:var(--text)}
+.beat-red{background:var(--accent);color:#fff}
+.beat-title{color:var(--head);font-size:15px;font-weight:600;margin:8px 0 4px}
+.beat-action,.beat-reaction{font-size:13px;color:var(--text);margin:2px 0;padding-left:12px;border-left:2px solid var(--border)}
+.beat-action b,.beat-reaction b{color:var(--head)}
+.space-label{color:var(--green);font-size:13px;font-weight:600;margin-bottom:8px}
+</style>
+</head>
+<body>
+<div class="container">
+
+<header class="top">
+<h1>分镜脚本 — <span>s{场次号} {场次名}</span></h1>
+<div class="sub">{项目名} · 为{用户名}准备 · {N}镜 · v2 全量</div>
+<div class="stats">
+<div class="stat"><div class="v">{N_SCENES}</div><div class="l">场次</div></div>
+<div class="stat"><div class="v">{N_SHOTS}</div><div class="l">总镜数</div></div>
+<div class="stat"><div class="v">{N_BEATS}</div><div class="l">节拍</div></div>
+<div class="stat"><div class="v">{N_KEY}</div><div class="l">🔴 戏点镜数</div></div>
+</div>
+</header>
+
+<div class="meta-bar">
+<span><b>机位图例：</b>🔴正打 🟡反打 🟢第三人称 🔵空间环境 🟣插入/切出</span>
+<span><b>场景价值：</b>{二元品质}（{极A} → {极B}）</span>
+<span><b>视点角色：</b>{角色名}</span>
+<span><b>戏点策略：</b>{策略方向}</span>
+</div>
+
+<div class="beat-section">
+<div class="space-label">▸ 空间建立镜 ({N} 镜)</div>
+<div class="table-wrap"><table>
+<colgroup>
+<col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"><col class="c7"><col class="c8"><col class="c9"><col class="c10">
+</colgroup>
+<thead><tr><th>#</th><th>运镜</th><th>空间关系</th><th>摄影机</th><th>机位</th><th>动作调度</th><th>台词</th><th>时长</th><th>音频</th><th>导演备注</th></tr></thead>
+<tbody>
+<tr>
+<td class="c-num">01</td><td>{运镜}</td><td>{空间关系}</td><td>{景别★}<br><span class="lens-tech">{mm}·{深浅}</span></td><td>{机位}</td><td>{动作调度}</td><td class="c-dialogue">{台词}</td><td class="c-dur">{时长}</td><td><span class="audio-music">{音乐}</span><br><span class="audio-sfx">{音效}</span></td><td class="c-notes">{备注}</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+</div>
+</body>
+</html>

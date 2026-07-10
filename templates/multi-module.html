@@ -1,0 +1,162 @@
+<!-- storyboard-shotlist 单页多模块框架
+  价值弧线 + 节拍分析 + v1骨架 + v2分镜 + 提示词，五个Tab一键切换
+  Tab切换：纯CSS radio button，零JavaScript，切换不滚动
+  每场戏一个 .html，后面陆续往里加
+  配色：EDL暗调风格，复用 v2 分镜表 CSS 变量
+  依赖：v2分镜表的完整 table 内容注入 #v2-table-container
+-->
+
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>{剧本名} · {场次号} {场次名}</title>
+<style>
+:root{--bg:#2b2b2b;--card:#222222;--border:#222222;--text:#e0e0e0;--head:#e0e0e0;--accent:#f43f5e;--green:#22c55e;--row-light:#3a3a3a;--row-dark:#333333}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font:15px/1.6 -apple-system,BlinkMacSystemFont,sans-serif}
+.container{width:100%;padding:24px 32px}
+.top{padding:32px 0 24px;border-bottom:1px solid var(--border);margin-bottom:0}
+.top h1{color:var(--head);font-size:24px;font-weight:700}
+.top h1 span{color:var(--accent)}
+.sub{color:var(--text);font-size:14px;margin-top:6px}
+
+/* Radio button tabs — no scroll on switch */
+input[name=tab]{display:none}
+.tabs{display:flex;gap:0;padding:0;background:var(--card);border-bottom:2px solid var(--accent)}
+.tabs label{display:block;padding:12px 20px;color:var(--text);font-size:14px;font-weight:600;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .2s;cursor:pointer}
+.tabs label:hover{color:var(--head);background:rgba(255,255,255,.03)}
+.tab-content{display:none;padding:24px 0}
+
+/* Active tab highlight + show content */
+#tab-v2:checked~#v2-storyboard{display:block}
+#tab-arc:checked~#value-arc{display:block}
+#tab-beat:checked~#beat-analysis{display:block}
+#tab-v1:checked~#v1-storyboard{display:block}
+#tab-prompt:checked~#prompt{display:block}
+#tab-v2:checked~.tabs label[for=tab-v2],
+#tab-arc:checked~.tabs label[for=tab-arc],
+#tab-beat:checked~.tabs label[for=tab-beat],
+#tab-v1:checked~.tabs label[for=tab-v1],
+#tab-prompt:checked~.tabs label[for=tab-prompt]{border-bottom-color:var(--accent);color:var(--head)}
+
+/* Shared table styles */
+.arc-table,.beat-table{width:100%;border-collapse:collapse;font-size:13px;margin:16px 0}
+.arc-table th,.beat-table th{background:var(--card);color:var(--head);padding:8px 6px;text-align:left;font-weight:600;font-size:12px;border-bottom:2px solid var(--accent)}
+.arc-table td,.beat-table td{padding:8px 6px;border-bottom:1px solid var(--border);vertical-align:top}
+.arc-table tr:nth-child(odd),.beat-table tr:nth-child(odd){background:var(--row-light)}
+.arc-table tr:nth-child(even),.beat-table tr:nth-child(even){background:var(--row-dark)}
+
+/* v1 skeleton */
+.v1-beat{margin-bottom:28px;padding:16px;background:var(--card);border:1px solid var(--border);border-radius:6px}
+.v1-beat h3{color:var(--head);font-size:15px;margin-bottom:8px}
+.v1-beat .meta{font-size:12px;color:var(--text);margin-bottom:8px}
+.v1-shot{margin:6px 0 6px 16px;font-size:13px;color:var(--text)}
+.tag{display:inline-block;padding:1px 6px;border-radius:3px;font-size:11px;margin-right:6px}
+.tag-trigger{background:rgba(244,63,94,.15);color:var(--accent)}
+.tag-action{background:rgba(34,197,94,.12);color:var(--green)}
+.tag-react{background:rgba(251,191,36,.12);color:#fbbf24}
+.tag-insert{background:rgba(167,139,250,.12);color:#a78bfa}
+.tag-estab{background:rgba(148,163,184,.12);color:#94a3b8}
+
+/* v2 table — match storyboard-shotlist 10-col CSS exactly */
+.table-wrap{overflow-x:auto;border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px}
+#v2-storyboard table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:13px}
+col.c1{width:42px}col.c2{width:72px}col.c3{width:160px}col.c4{width:110px}col.c5{width:90px}col.c6{width:auto}col.c7{width:140px}col.c8{width:44px}col.c9{width:120px}col.c10{width:180px}
+#v2-storyboard thead th{background:var(--card);color:var(--head);padding:10px 6px;text-align:left;font-weight:600;font-size:12px;white-space:nowrap;position:sticky;top:0;z-index:1;border-bottom:2px solid var(--accent)}
+#v2-storyboard tbody td{padding:8px 6px;border-bottom:1px solid var(--border);vertical-align:top;word-break:break-word}
+#v2-storyboard tbody tr:nth-child(odd){background:var(--row-light)}
+#v2-storyboard tbody tr:nth-child(even){background:var(--row-dark)}
+#v2-storyboard tbody tr{transition:background .3s ease}
+#v2-storyboard tbody tr:hover{background:rgba(244,63,94,.12);box-shadow:inset 2px 0 0 var(--accent)}
+#v2-storyboard tbody td:nth-child(1){white-space:nowrap}
+#v2-storyboard tbody td:nth-child(2){white-space:nowrap}
+#v2-storyboard tbody td:nth-child(4){white-space:nowrap}
+#v2-storyboard tbody td:nth-child(5){white-space:nowrap}
+#v2-storyboard tbody td:nth-child(8){white-space:nowrap}
+.c-num{color:var(--accent);font-weight:700;text-align:center}
+.c-dur{text-align:center;white-space:nowrap;color:var(--green)}
+.c-dialogue{color:#fbbf24}
+.lens-tech{font-size:11px;color:var(--text);opacity:.35}
+.audio-music{color:#fbbf24;font-size:12px}
+.audio-sfx{color:#94a3b8;font-size:11px}
+.c-notes{color:var(--text);font-size:12px}
+.beat-section{margin-bottom:32px}
+.beat-label{display:inline-block;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:700;margin-right:8px}
+.beat-dot{background:var(--row-light);color:var(--text)}
+.beat-red{background:var(--accent);color:#fff}
+.beat-title{color:var(--head);font-size:15px;font-weight:600;margin:8px 0 4px}
+.beat-action,.beat-reaction{font-size:13px;color:var(--text);margin:2px 0;padding-left:12px;border-left:2px solid var(--border)}
+.beat-action b,.beat-reaction b{color:var(--head)}
+.beat-intent{font-size:13px;color:var(--green);margin-top:6px;font-style:italic}
+.space-label{color:var(--green);font-size:13px;font-weight:600;margin-bottom:8px}
+.meta-bar{display:flex;gap:24px;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--border);margin-bottom:20px;font-size:14px}
+.meta-bar span{color:var(--text)}
+.meta-bar b{color:var(--head)}
+.placeholder{display:flex;align-items:center;justify-content:center;height:200px;color:var(--text);font-size:18px;opacity:.4}
+h2{color:var(--head);font-size:18px;margin:20px 0 12px}
+h3{color:var(--head);font-size:15px;margin:16px 0 8px}
+p,li{font-size:14px;margin:4px 0}
+</style>
+</head>
+<body>
+<div class="container">
+
+<header class="top">
+<h1>{剧本名} — <span>{场次号} {场次名}</span></h1>
+<div class="sub">{空间} · {时间} · {预估时长} · {N} 镜</div>
+</header>
+
+<input type="radio" name="tab" id="tab-v2" checked>
+<input type="radio" name="tab" id="tab-arc">
+<input type="radio" name="tab" id="tab-beat">
+<input type="radio" name="tab" id="tab-v1">
+<input type="radio" name="tab" id="tab-prompt">
+<nav class="tabs">
+<label for="tab-arc">价值弧线</label>
+<label for="tab-beat">节拍分析</label>
+<label for="tab-v1">v1 骨架</label>
+<label for="tab-v2">v2 分镜</label>
+<label for="tab-prompt">提示词</label>
+</nav>
+
+<!-- ====== 价值弧线 ====== -->
+<section id="value-arc" class="tab-content">
+<h2>全篇价值弧线（{范围}）</h2>
+<p><b>宏观价值：{二元品质}</b></p>
+<!-- 弧线表 + 诊断 -->
+</section>
+
+<!-- ====== 节拍分析 ====== -->
+<section id="beat-analysis" class="tab-content">
+<h2>节拍分析</h2>
+<div class="meta-bar"><span><b>场景价值:</b>{二元品质}({极A}→{极B})</span><span><b>视点角色:</b>{角色}</span></div>
+<!-- 节拍全量表 + 节奏曲线 -->
+</section>
+
+<!-- ====== v1 骨架 ====== -->
+<section id="v1-storyboard" class="tab-content">
+<h2>v1 骨架</h2>
+<div class="meta-bar"><span><b>场景价值:</b>{二元品质}</span><span><b>戏点策略:</b>{策略}</span></div>
+<!-- 按beat分组的v1镜头拆分 -->
+</section>
+
+<!-- ====== v2 分镜 ====== -->
+<section id="v2-storyboard" class="tab-content">
+<div class="meta-bar">
+<span><b>机位图例：</b>🔴正打 🟡反打 🟢第三人称 🔵空间环境 🟣插入/切出</span>
+<span><b>场景价值：</b>{二元品质}（{极A} → {极B}）</span>
+<span><b>视点角色：</b>{角色}</span>
+<span><b>戏点策略：</b>{策略}</span>
+</div>
+<!-- INJECT_V2_TABLE_HERE -->
+</section>
+
+<!-- ====== 提示词 ====== -->
+<section id="prompt" class="tab-content">
+<div class="placeholder">提示词模块 — 待构建</div>
+</section>
+
+</div>
+</body>
+</html>
