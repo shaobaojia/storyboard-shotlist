@@ -1,6 +1,7 @@
 <!-- storyboard-shotlist v2 HTML 模板骨架
   10 列：镜号 | 运镜 | 空间关系 | 摄影机 | 机位 | 动作调度 | 台词 | 时长 | 音频 | 导演备注
   阅读流：运镜+空间="画面里有什么，动不动" → 摄影机+机位="什么镜头" → 动作+台词="干什么说什么"
+  归纳：摄影机=景别★+焦段·景深（DP实拍三项一起定）。音频=音乐(金)+音效(灰蓝)。
 
   可视化标记：
     摄影机列 — 景别★(上) + 焦段·景深(下, .lens-tech 11px/opacity.35)
@@ -41,14 +42,14 @@ body{background:var(--bg);color:var(--text);font:15px/1.6 -apple-system,BlinkMac
 
 .table-wrap{overflow-x:auto;border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px}
 table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:13px}
-
+/* 列宽·10列：镜号运镜空间摄影机机位动作台词时长音频备注 */
 col.c1{width:42px}col.c2{width:72px}col.c3{width:160px}col.c4{width:110px}col.c5{width:90px}col.c6{width:auto}col.c7{width:140px}col.c8{width:44px}col.c9{width:120px}col.c10{width:180px}
 
 thead th{background:var(--card);color:var(--head);padding:10px 6px;text-align:left;font-weight:600;font-size:12px;white-space:nowrap;position:sticky;top:0;z-index:1;border-bottom:2px solid var(--accent)}
 tbody td{padding:8px 6px;border-bottom:1px solid var(--border);vertical-align:top;word-break:break-word}
 tbody tr:nth-child(odd){background:var(--row-light)}tbody tr:nth-child(even){background:var(--row-dark)}
 tbody tr:hover{background:rgba(244,63,94,.08)}
-
+/* nowrap·10列：镜号(1) 运镜(2) 摄影机(4) 机位(5) 时长(8) */
 tbody td:nth-child(1){white-space:nowrap}tbody td:nth-child(2){white-space:nowrap}tbody td:nth-child(4){white-space:nowrap}tbody td:nth-child(5){white-space:nowrap}tbody td:nth-child(8){white-space:nowrap}
 
 .lens-tech{font-size:11px;color:var(--text);opacity:.35}
@@ -59,6 +60,9 @@ tbody td:nth-child(1){white-space:nowrap}tbody td:nth-child(2){white-space:nowra
 .audio-music{color:#fbbf24;font-size:12px}
 .audio-sfx{color:#94a3b8;font-size:11px}
 .c-notes{color:var(--text);font-size:12px}
+.lens-tech{font-size:11px;color:var(--text);opacity:.35}
+.audio-music{color:#fbbf24;font-size:12px}
+.audio-sfx{color:#94a3b8;font-size:11px}
 
 .beat-section{margin-bottom:32px}
 .beat-label{display:inline-block;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:700;margin-right:8px}
