@@ -51,22 +51,15 @@ input[name=scene],input[name^=sub-]{display:none}
 
 /* ── v2 11-column table ── */
 #v2-s010 table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:13px}
-col.c1{width:42px}col.c2{width:72px}col.c3{width:160px}col.c4{width:110px}col.c5{width:90px}col.c6{width:auto;max-width:300px}col.c7{width:140px}col.c8{width:44px}col.c9{width:120px}col.c10{width:180px}col.c11{width:auto}
-/* Default: prompt visible — hide audio + notes columns */
-col.c9{width:0}col.c10{width:0}col.c6{width:auto;max-width:300px}col.c11{width:auto}
-th:nth-child(9),th:nth-child(10),td:nth-child(9),td:nth-child(10){width:0!important;padding:0!important;overflow:hidden!important;border:none!important;font-size:0!important;max-width:0!important}
-/* Toggled: prompt hidden — show audio + notes, hide prompt */
-.hide-c11 col.c9{width:120px}.hide-c11 col.c10{width:180px}.hide-c11 col.c11{width:0}
-.hide-c11 th:nth-child(9),.hide-c11 th:nth-child(10){width:auto!important;padding:10px 6px!important;overflow:visible!important;border-bottom:2px solid var(--accent)!important;font-size:12px!important;max-width:none!important}
-.hide-c11 td:nth-child(9),.hide-c11 td:nth-child(10){width:auto!important;padding:8px 6px!important;overflow:visible!important;border-bottom:1px solid var(--border)!important;font-size:inherit!important;max-width:none!important}
-.hide-c11 th:nth-child(11){display:none!important}
-.hide-c11 td.c-prompt{display:none!important}
+col.c1{width:42px}col.c2{width:72px}col.c3{width:160px}col.c4{width:110px}col.c5{width:90px}col.c6{width:auto;max-width:300px}col.c7{width:140px}col.c8{width:44px}col.c9{width:120px}col.c10{width:180px}col.c11{width:0}
+/* 提示词列隐藏（数据供面板读取） */
+th:nth-child(11),td:nth-child(11){width:0!important;padding:0!important;overflow:hidden!important;border:none!important;font-size:0!important;max-width:0!important}
 
 thead th{background:var(--card);color:var(--head);padding:10px 6px;text-align:left;font-weight:600;font-size:12px;white-space:nowrap;position:sticky;top:0;z-index:1;border-bottom:2px solid var(--accent)}
 tbody td{padding:8px 6px;border-bottom:1px solid var(--border);vertical-align:top;word-break:break-word}
 tbody tr:nth-child(odd){background:var(--row-light)}tbody tr:nth-child(even){background:var(--row-dark)}
-tbody tr{transition:background .3s ease}
-tbody tr:hover{background:rgba(244,63,94,.12);box-shadow:inset 2px 0 0 var(--accent)}
+tbody tr:hover{background:rgba(244,63,94,.12)}
+.prompt-row.clicked td{background:rgba(244,63,94,.12)!important}
 tbody td:nth-child(1){white-space:nowrap}tbody td:nth-child(2){white-space:nowrap}tbody td:nth-child(4){white-space:nowrap}tbody td:nth-child(5){white-space:nowrap}tbody td:nth-child(8){white-space:nowrap}
 .c-num{color:var(--accent);font-weight:700;text-align:center}
 .c-dur{text-align:center;white-space:nowrap;color:var(--green)}
@@ -76,6 +69,60 @@ tbody td:nth-child(1){white-space:nowrap}tbody td:nth-child(2){white-space:nowra
 .audio-sfx{color:#94a3b8;font-size:11px}
 .c-notes{color:var(--text);font-size:12px}
 .c-prompt{word-break:normal;white-space:pre-line;font-size:12px;line-height:1.5}
+
+/* ── 节拍属性标签 ── */
+.prop-tag{display:inline-block;padding:0 3px;border-radius:2px;font-size:10px;font-weight:700;line-height:16px;margin-right:2px;vertical-align:middle}
+.c-trigger{background:rgba(244,63,94,.15);color:var(--accent)}
+.c-action{background:rgba(34,197,94,.12);color:var(--green)}
+.c-react{background:rgba(251,191,36,.12);color:#fbbf24}
+.c-estab{background:rgba(148,163,184,.12);color:#94a3b8}
+.c-insert{background:rgba(167,139,250,.12);color:#a78bfa}
+
+/* ── 提示词面板 ── */
+.prompt-panel{position:fixed;top:0;right:-540px;width:500px;height:100vh;background:var(--card);border-left:2px solid var(--accent);z-index:100;transition:right .4s cubic-bezier(.25,.8,.25,1);display:flex;flex-direction:column;box-shadow:-4px 0 20px rgba(0,0,0,.4)}
+.prompt-panel.open{right:0}
+.prompt-panel.pinned .prompt-overlay{display:none}
+.prompt-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.3);z-index:99}
+.prompt-overlay.show{display:block}
+.prompt-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--card);z-index:2}
+.prompt-header h3{color:var(--head);font-size:16px;margin:0}
+.prompt-header .shot-meta{color:var(--accent);font-size:13px;font-weight:600}
+.prompt-close{background:none;border:none;color:var(--text);font-size:20px;cursor:pointer;padding:4px 8px}
+.prompt-close:hover{color:var(--head)}
+.prompt-body{flex:1;overflow-y:auto;padding:20px;font-size:14px;line-height:1.8;color:var(--text)}
+.prompt-covered{font-size:12px;color:var(--green);margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.prompt-inherit{font-size:11px;color:var(--accent);margin-bottom:12px}
+.prompt-text{font-size:14px;line-height:2;color:#d4d4d4;white-space:pre-wrap;background:rgba(0,0,0,.15);border-radius:6px;padding:16px 18px;box-shadow:inset 0 1px 3px rgba(0,0,0,.3),0 1px 0 rgba(255,255,255,.03)}
+.prompt-line{margin-bottom:4px;line-height:1.9;font-size:14px}
+.prompt-spacer{height:8px}
+/* A: 实心小药丸 */
+.prompt-badge-a{display:inline-block;padding:1px 7px;font-size:10px;font-weight:700;border-radius:10px;margin-right:6px;color:#111}
+/* B: 左侧竖条 */
+.prompt-line-b{border-left:3px solid;padding-left:10px;margin-bottom:4px}
+.prompt-line-b .prompt-badge-b{font-size:11px;font-weight:700;margin-right:6px}
+/* C: 微底高亮 */
+.prompt-line-c{margin-bottom:4px}
+.prompt-line-c .prompt-badge-c{font-size:12px;font-weight:700;margin-right:4px}
+.prompt-line-c .prompt-badge-c::before{content:"● ";color:inherit;margin-right:2px}
+.prompt-body .lens-tech{font-size:11px;opacity:.35}
+.prompt-empty{display:flex;align-items:center;justify-content:center;height:100%;color:var(--text);opacity:.3;font-size:15px}
+.prompt-row{cursor:pointer}
+
+/* 拖拽柄 */
+.prompt-resize{position:absolute;top:0;left:-4px;width:8px;height:100%;cursor:col-resize;z-index:3}
+.prompt-resize:hover,.prompt-resize.active{background:var(--accent);opacity:.3}
+
+/* 钉住按钮 */
+.btn-pin{background:none;border:none;color:var(--text);font-size:16px;cursor:pointer;padding:4px 6px;opacity:.5;transition:all .2s}
+.btn-pin:hover,.btn-pin.pinned{opacity:1;color:var(--accent)}
+
+/* 复制按钮弹跳 */
+@keyframes copyBounce{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+.copy-bounce{animation:copyBounce .3s ease}
+
+/* 正文淡入 */
+.prompt-text.fade-in{animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:.3;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 
 /* ── Other tables ── */
 .arc-table{width:100%;border-collapse:collapse;font-size:13px;margin:16px 0}
@@ -150,6 +197,21 @@ ul{padding-left:20px}
 
 {{SCENE_SECTIONS}}</section>
 
+
+<!-- Prompt Panel -->
+<div class="prompt-overlay" id="prompt-overlay" onclick="closePrompt()"></div>
+<div class="prompt-panel" id="prompt-panel">
+<div class="prompt-header">
+<div><h3 style="margin:0;color:var(--head);font-size:16px">提示词</h3><span class="shot-meta" id="prompt-shot-num"></span></div>
+<div style="display:flex;gap:8px;align-items:center">
+<button class="btn-refresh" id="prompt-copy" style="font-size:12px;padding:4px 10px">📋 复制</button>
+<button class="prompt-close" onclick="closePrompt()">✕</button>
+</div>
+</div>
+<div class="prompt-body" id="prompt-body">
+<div class="prompt-empty">点击镜头行查看提示词</div>
+</div>
+</div>
 </div>
 
 <!-- Settings Panel -->
@@ -189,12 +251,6 @@ ul{padding-left:20px}
       sr.addEventListener('change', function(){ localStorage.setItem('lastSub-' + sceneId, sr.id); });
     });
   });
-  var hide = localStorage.getItem('hidePrompt');
-  if (hide === 'true') {
-    document.querySelectorAll('.beat-section table').forEach(function(tb){tb.classList.add('hide-c11')});
-    var btn = document.getElementById('toggle-prompt');
-    if (btn) btn.textContent = '显示提示词';
-  }
 })();
 
 // ── Feishu Refresh ──
@@ -283,7 +339,7 @@ async function refreshFromFeishu(){
     
     setStatus('重建表格...', '');
     
-    // 3. Normalize & build rows
+    // 3. Normalize
     function norm(v){
       if (Array.isArray(v) && v.length && v[0].text !== undefined) {
         return v.map(function(x){return x.text}).join('');
@@ -295,7 +351,6 @@ async function refreshFromFeishu(){
     allRecords.forEach(function(r){
       var f = r.fields || {};
       var s = {
-        record_id: r.record_id || '',
         jinghao: norm(f['镜号']),
         yunjing: norm(f['运镜']),
         kongjian: norm(f['空间关系']),
@@ -308,62 +363,57 @@ async function refreshFromFeishu(){
         shichang: parseFloat(f['时长(秒)']) || 0,
         yinpin: norm(f['音频']),
         beizhu: norm(f['导演备注']),
-        tishici: norm(f['提示词'])
+        tishici: norm(f['提示词']),
+        beatNum: norm(f['beat序号']),
+        beatType: norm(f['beat类型']),
+        beatTitle: norm(f['beat标题']),
+        beatAction: norm(f['节拍动作'])
       };
       if (s.jinghao) shots.push(s);
     });
     shots.sort(function(a,b){ return a.jinghao.localeCompare(b.jinghao, undefined, {numeric:true}); });
     
-    // 4. Build HTML
-    var rowsHtml = '';
-    shots.forEach(function(s){
-      // Parse 景别: framing lines + ↓ separator + lens-tech span
+    // 4. Build beat-grouped HTML
+    function buildRow(s){
       var raw = s.jingbie.trim();
       var lensMatch = raw.match(/(\d+mm·(?:浅|中|深)(?:→(?:浅|中|深))?)/);
-      var lensHtml = '';
-      var framing = raw;
-      if (lensMatch) {
-        lensHtml = '<br><span class="lens-tech">' + lensMatch[1] + '</span>';
-        framing = (raw.substring(0, lensMatch.index) + raw.substring(lensMatch.index + lensMatch[0].length)).trim();
-      }
-      var sheyingji;
-      if (framing.indexOf('↓') !== -1) {
-        var parts = framing.split('↓');
-        sheyingji = parts[0].trim() + '<br>↓<br>' + parts[1].trim() + lensHtml;
-      } else {
-        sheyingji = framing + lensHtml;
-      }
-      
-      var yinpin = s.yinpin;
-      var audioHtml;
-      if (yinpin && yinpin.trim() && yinpin.trim() !== '—') {
-        audioHtml = '<span class="audio-sfx">' + yinpin.replace(/\n/g,'<br>') + '</span>';
-      } else {
-        audioHtml = '<span class="audio-music">—</span>';
-      }
-      
+      var lensHtml = lensMatch ? '<br><span class="lens-tech">' + lensMatch[1] + '</span>' : '';
+      var framing = lensMatch ? (raw.substring(0, lensMatch.index) + raw.substring(lensMatch.index + lensMatch[0].length)).trim() : raw;
+      var sheyingji = framing.indexOf('↓') !== -1 ? framing.split('↓')[0].trim() + '<br>↓<br>' + framing.split('↓')[1].trim() + lensHtml : framing + lensHtml;
+      var yinpin = s.yinpin, audioHtml;
+      if (yinpin && yinpin.trim() && yinpin.trim() !== '—') audioHtml = '<span class="audio-sfx">' + yinpin.replace(/\n/g,'<br>') + '</span>';
+      else audioHtml = '<span class="audio-music">—</span>';
       var dur = s.shichang ? Math.round(s.shichang) + 's' : '';
       var taiciHtml = s.taici ? '<td class="c-dialogue">' + s.taici + '</td>' : '<td></td>';
-      
-      rowsHtml += '<tr>' +
-        '<td class="c-num">' + s.jinghao + '</td>' +
-        '<td>' + s.yunjing + '</td>' +
-        '<td>' + s.kongjian + '</td>' +
-        '<td>' + sheyingji + '</td>' +
-        '<td>' + (JIWEI_SHORT[s.jiwei] || s.jiwei) + '</td>' +
-        '<td>' + s.dongzuo + '</td>' +
-        taiciHtml +
-        '<td class="c-dur">' + dur + '</td>' +
-        '<td>' + audioHtml + '</td>' +
-        '<td class="c-notes">' + s.beizhu + '</td>' +
-        '<td></td>' +
-        '</tr>';
+      return '<tr><td class="c-num">' + s.jinghao + '</td><td>' + s.yunjing + '</td><td>' + s.kongjian + '</td><td>' + sheyingji + '</td><td>' + (JIWEI_SHORT[s.jiwei]||s.jiwei) + '</td><td>' + s.dongzuo + '</td>' + taiciHtml + '<td class="c-dur">' + dur + '</td><td>' + audioHtml + '</td><td class="c-notes">' + s.beizhu + '</td><td class="c-prompt">' + s.tishici + '</td></tr>';
+    }
+    
+    var groups = {}; var order = [];
+    shots.forEach(function(s){ var k = s.beatNum||'_'; if(!groups[k]){groups[k]=[];order.push(k);} groups[k].push(s); });
+    var blocks = [];
+    var th = '<thead><tr><th>#</th><th>运镜</th><th>空间关系</th><th>摄影机</th><th>机位</th><th>动作调度</th><th>台词</th><th>时长</th><th>音频</th><th>导演备注</th><th>提示词</th></tr></thead>';
+    var cg = '<colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"><col class="c7"><col class="c8"><col class="c9"><col class="c10"><col class="c11"></colgroup>';
+    
+    order.forEach(function(k){
+      var gs = groups[k]; var b = gs[0];
+      if(k === '空间' || k === '_' && !b.beatType){
+        blocks.push('<div class="beat-section"><div class="space-label">▸ 空间建立镜 (' + gs.length + ' 镜)</div><div class="table-wrap"><table>' + cg + th + '<tbody>' + gs.map(buildRow).join('') + '</tbody></table></div></div>');
+      } else {
+        var lc = b.beatType.indexOf('戏点')!==-1 ? 'beat-red' : 'beat-dot';
+        var block = '<div class="beat-section"><span class="beat-label ' + lc + '">' + b.beatType + '</span><span class="beat-title">beat ' + k + '：' + b.beatTitle + ' (' + gs.length + ' 镜)</span>';
+        if(b.beatAction){
+          var parts = b.beatAction.split('→');
+          block += '<div class="beat-action">' + parts[0].trim() + (parts.length>1?'<br>'+parts[1].trim():'') + '</div>';
+        }
+        block += '<div class="table-wrap"><table>' + cg + th + '<tbody>' + gs.map(buildRow).join('') + '</tbody></table></div></div>';
+        blocks.push(block);
+      }
     });
     
-    // 5. Replace table body (only if we have data)
-    var tbody = document.querySelector('#v2-s010 tbody');
-    if (tbody && shots.length > 0) {
-      tbody.innerHTML = rowsHtml;
+    // 5. Replace v2-s010 content
+    var container = document.getElementById('v2-s010');
+    if (container && shots.length > 0) {
+      container.innerHTML = blocks.join('');
     } else if (shots.length === 0) {
       setStatus('无数据，请检查飞书表格', 'err');
       if (btn) btn.disabled = false;
@@ -373,6 +423,9 @@ async function refreshFromFeishu(){
     // Update stats
     var totalDur = shots.reduce(function(a,s){return a + (s.shichang||0)}, 0);
     setStatus(shots.length + '镜 ' + Math.floor(totalDur/60) + '′' + Math.round(totalDur%60) + '″', 'ok');
+    
+    // Re-attach prompt click handlers
+    setTimeout(attachPromptClicks, 200);
     
     // Update info bar stats
     var infoBar = document.querySelector('.info-bar');
@@ -389,6 +442,206 @@ async function refreshFromFeishu(){
     if (btn) btn.disabled = false;
   }
 }
+
+// ── 提示词面板 ──
+var currentShotData = null;
+
+function openPrompt(shotNum, rowElement) {
+  var row = rowElement || document.querySelector('[data-shot="' + shotNum + '"]');
+  if (!row) return;
+  
+  var cells = row.querySelectorAll('td');
+  var promptRaw = cells.length >= 11 ? cells[10].textContent.trim() : '';
+  var promptText = '';
+  var sourceShot = shotNum;
+  var visited = {};
+  
+  // Follow ←scene-NN or ←NN chain
+  while (promptRaw) {
+    var inheritMatch = promptRaw.match(/^[↑←]\s*(?:(\w+)-)?(\d+)$/);
+    if (inheritMatch) {
+      var target = inheritMatch[2];
+      if (visited[target]) break;
+      visited[target] = true;
+      sourceShot = target;
+      var targetRow = document.querySelector('[data-shot="' + target + '"]');
+      if (targetRow) {
+        var targetCells = targetRow.querySelectorAll('td');
+        promptRaw = targetCells.length >= 11 ? targetCells[10].textContent.trim() : '';
+      } else {
+        promptText = '(未找到镜' + target + ')';
+        break;
+      }
+    } else {
+      promptText = promptRaw;
+      break;
+    }
+  }
+  
+  currentShotData = {promptText: promptText, sourceShot: sourceShot};
+  
+  // Highlight all shots sharing same prompt + collect covered shots
+  document.querySelectorAll('.prompt-row.clicked').forEach(function(r){r.classList.remove('clicked')});
+  var coveredShots = [shotNum];
+  if (promptText) {
+    var rootSource = sourceShot !== shotNum ? sourceShot : shotNum;
+    document.querySelectorAll('#v2-s010 .prompt-row').forEach(function(r){
+      var rc = r.querySelectorAll('td');
+      if (rc.length < 11) return;
+      var rp = rc[10].textContent.trim();
+      var sn = r.getAttribute('data-shot');
+      if (sn === shotNum) { r.classList.add('clicked'); return; }  // highlight self, skip double-count
+      if (sn === rootSource) { r.classList.add('clicked'); coveredShots.push(sn); return; }
+      var m = rp.match(/^[↑←]\s*(?:\w+-)?(\d+)$/);
+      if (m && m[1] === rootSource) { r.classList.add('clicked'); coveredShots.push(sn); }
+    });
+  }
+  coveredShots.sort(function(a,b){return parseInt(a)-parseInt(b)});
+  var coveredLabel = '镜 ' + coveredShots.join(', ');
+  
+  var body = document.getElementById('prompt-body');
+  if (promptText) {
+    var inheritNote = sourceShot !== shotNum ? '<div class="prompt-inherit">↑ 继承自 镜' + sourceShot + '</div>' : '';
+    // Parse 演/拍/呈 blocks
+    var blocks = parsePromptBlocks(promptText);
+    
+    body.innerHTML = '<div class="prompt-covered">' + coveredLabel + '</div>' +
+      inheritNote +
+      '<div class="prompt-text fade-in">' + blocks + '</div>';
+  } else {
+    body.innerHTML = '<div class="prompt-empty">暂无提示词</div>';
+  }
+  
+  // Copy button handler
+  document.getElementById('prompt-copy').onclick = function(){
+    var text = promptText || '';
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function(){
+        var btn = document.getElementById('prompt-copy');
+        btn.textContent = '✓ 已复制'; bounceCopyBtn();
+        setTimeout(function(){ btn.textContent = '📋 复制'; }, 2000);
+      }).catch(function(){ fallbackCopy(text); });
+    } else { fallbackCopy(text); }
+  };
+  
+  function fallbackCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    var btn = document.getElementById('prompt-copy');
+    btn.textContent = '✓ 已复制'; bounceCopyBtn();
+    setTimeout(function(){ btn.textContent = '📋 复制'; }, 2000);
+  }
+  
+  document.getElementById('prompt-panel').classList.add('open');
+  document.getElementById('prompt-overlay').classList.add('show');
+  // Ensure panel slides fully off when closed: right offset = panel width
+  var panelEl = document.getElementById('prompt-panel');
+  panelEl.style.right = '0px';
+  // Store close offset for next close
+  panelEl._closeOffset = '-' + panelEl.offsetWidth + 'px';
+}
+function parsePromptBlocks(text) {
+  // Style assignments: A=药丸(场景/人物), B=竖条(空间锚/镜头), C=微底(其余)
+  var headingRe = /^(@图片\d+|场景|空间锚|人物|镜头[一二三四五六七八九十\d]+|视角|光线|调色|氛围|时长|景别|焦段|景深|机位|运镜)[：:]/;
+  var styleMap = {};
+  var colors = {
+    '场景':'#f59e0b','空间锚':'#3b82f6','人物':'#f59e0b','镜头':'#a78bfa',
+    '视角':'#10b981','光线':'#f59e0b','调色':'#ec4899',
+    '氛围':'#8b5cf6','时长':'#6b7280','景别':'#f43f5e',
+    '焦段':'#3b82f6','景深':'#10b981','机位':'#f59e0b',
+    '运镜':'#a78bfa','@图片':'#6b7280'
+  };
+  var lines = text.split(/[\n\r]+/);
+  var result = '';
+  for (var i=0;i<lines.length;i++){
+    var line = lines[i];
+    var m = line.match(headingRe);
+    if (m) {
+      var key = m[1];
+      if (key.indexOf('@图片')===0) key = '@图片';
+      else if (/^镜头[一二三四五六七八九十\d]+$/.test(key)) key = '镜头';
+      var color = colors[key]||'#6b7280';
+      var style = styleMap[key]||'C';
+      var body = line.substring(m[0].length).replace(/</g,'&lt;');
+      
+      if (style === 'A') {
+        result += '<div class="prompt-line"><span class="prompt-badge-a" style="background:'+color+'">'+m[1]+'</span> '+body+'</div>';
+      } else if (style === 'B') {
+        result += '<div class="prompt-line-b" style="border-color:'+color+'"><span class="prompt-badge-b" style="color:'+color+'">'+m[1]+'</span> '+body+'</div>';
+      } else {
+        result += '<div class="prompt-line-c"><span class="prompt-badge-c" style="color:'+color+'">'+m[1]+'</span> '+body+'</div>';
+      }
+    } else if (line.trim()) {
+      result += '<div class="prompt-line">'+line.replace(/</g,'&lt;')+'</div>';
+    } else {
+      result += '<div class="prompt-spacer"></div>';
+    }
+  }
+  return result;
+}
+
+// 拖拽 + 钉住
+(function(){
+  var p = document.getElementById('prompt-panel'); if(!p) return;
+  var h = document.createElement('div'); h.className='prompt-resize'; p.appendChild(h);
+  var d=false,sx,sw;
+  h.onmousedown=function(e){d=true;sx=e.clientX;sw=p.offsetWidth;h.classList.add('active');e.preventDefault();};
+  document.onmousemove=function(e){if(!d)return;p.style.width=Math.max(320,Math.min(900,sw+sx-e.clientX))+'px';};
+  document.onmouseup=function(){if(d){d=false;h.classList.remove('active');}};
+  var b=document.createElement('button');b.className='btn-pin';b.textContent='📌';b.title='钉住';
+  var hr=p.querySelector('.prompt-header>div:last-child');if(hr)hr.insertBefore(b,hr.firstChild);
+  b.onclick=function(){var pn=p.classList.toggle('pinned');b.classList.toggle('pinned',pn);
+    if(!pn)document.getElementById('prompt-overlay').classList.add('show');
+    else document.getElementById('prompt-overlay').classList.remove('show');};
+})();
+
+function bounceCopyBtn(){
+  var b=document.getElementById('prompt-copy');if(!b)return;
+  b.classList.remove('copy-bounce');void b.offsetWidth;b.classList.add('copy-bounce');
+}
+
+
+function closePrompt() {
+  var panel = document.getElementById('prompt-panel');
+  panel.classList.remove('open');
+  panel.classList.remove('pinned');
+  // Slide fully off screen using stored or default offset
+  panel.style.right = panel._closeOffset || '-540px';
+  document.getElementById('prompt-overlay').classList.remove('show');
+  document.querySelectorAll('.prompt-row.clicked').forEach(function(r){r.classList.remove('clicked')});
+  var pb = panel.querySelector('.btn-pin');
+  if (pb) pb.classList.remove('pinned');
+}
+
+function attachPromptClicks() {
+  document.querySelectorAll('#v2-s010 tbody tr').forEach(function(row){
+    var numCell = row.querySelector('.c-num');
+    if (!numCell || row.classList.contains('prompt-row')) return;
+    row.classList.add('prompt-row');
+    var shotNum = numCell.textContent.trim();
+    row.setAttribute('data-shot', shotNum);
+    row.addEventListener('click', function(e){
+      // Clear previous clicked before setting new one
+      document.querySelectorAll('.prompt-row.clicked').forEach(function(r){r.classList.remove('clicked')});
+      openPrompt(shotNum, row);
+    });
+  });
+}
+
+// Attach clicks after initial load
+document.addEventListener('DOMContentLoaded', function(){
+  setTimeout(attachPromptClicks, 500);
+});
+// Also attach after tab switch
+document.querySelectorAll('[name=scene], [name^=sub-]').forEach(function(r){
+  r.addEventListener('change', function(){ setTimeout(attachPromptClicks, 300); });
+});
+
 </script>
 </body>
 </html>

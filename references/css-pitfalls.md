@@ -1,10 +1,34 @@
 # v2 表格 CSS 避坑指南
 
-> s010 分镜表实战中踩过的 CSS 坑。列隐藏、rowspan、table-layout、col 元素——每一个都以为能行，每一个都翻过车。
+> s010 分镜表实战中踩过的 CSS 坑。
 
 ---
 
-## 列隐藏：方案对比
+## 当前列显隐状态（提示词面板取代 toggle）
+
+| 列 | 显示 | 说明 |
+|:---|:---|:---|
+| c1-c8 | ✅ | 镜号～时长 |
+| c9 | ✅ | 音频 |
+| c10 | ✅ | 导演备注 |
+| c11 | 隐藏 | 提示词（数据供面板读取） |
+
+```css
+col.c11{width:0}
+th:nth-child(11),td:nth-child(11){width:0!important;padding:0!important;overflow:hidden!important;border:none!important;font-size:0!important;max-width:0!important}
+```
+
+> **⚠️ 不要再用 hide-c11 toggle。** 旧的「隐藏提示词/显示提示词」切换功能已删除。提示词面板替代了它的作用。c9/c10 始终可见。
+
+---
+
+## nth-child 翻车记录
+
+修改列数时**所有 nth-child 规则失效**——选择器绑定的列号变了，出现字体倒挂、宽度错乱、边框消失。每次加减列必须全量 grep + 逐条校对 nth-child 选择器。最典型的一次：删掉 c11 后 thead 的 `nth-child(9)` 从音频变成了导演备注，字体大小 0 把导演备注吞了。
+
+---
+
+## 列隐藏：方案对比（历史参考）
 
 | 方案 | 结果 | 原因 |
 |:---|:---|:---|

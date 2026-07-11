@@ -94,6 +94,11 @@ def records_to_shots(records):
             "音频": normalize(f.get("音频", "")),
             "导演备注": normalize(f.get("导演备注", "")),
             "提示词": normalize(f.get("提示词", "")),
+            "节拍属性": normalize(f.get("节拍属性", "")),
+            "beat序号": normalize(f.get("beat序号", "")),
+            "beat类型": normalize(f.get("beat类型", "")),
+            "beat标题": normalize(f.get("beat标题", "")),
+            "节拍动作": normalize(f.get("节拍动作", "")),
         }
         if s["镜号"]:
             shots.append(s)
@@ -131,10 +136,10 @@ def build_shot_row(shot):
     taici = shot.get("台词", "")
     taici_html = '<td class="c-dialogue">{}</td>'.format(taici) if taici else "<td></td>"
     
-    return '<tr>\n<td class="c-num">{镜号}</td>\n<td>{运镜}</td>\n<td>{空间关系}</td>\n<td>{摄影机}</td>\n<td>{机位}</td>\n<td>{动作调度}</td>\n{台词}\n<td class="c-dur">{时长}</td>\n<td>{音频}</td>\n<td class="c-notes">{导演备注}</td>\n<td></td>\n</tr>'.format(
+    return '<tr>\n<td class="c-num">{镜号}</td>\n<td>{运镜}</td>\n<td>{空间关系}</td>\n<td>{摄影机}</td>\n<td>{机位}</td>\n<td>{动作调度}</td>\n{台词}\n<td class="c-dur">{时长}</td>\n<td>{音频}</td>\n<td class="c-notes">{导演备注}</td>\n<td class="c-prompt">{提示词}</td>\n</tr>'.format(
         镜号=shot["镜号"], 运镜=shot.get("运镜",""), 空间关系=shot.get("空间关系",""),
         摄影机=sheyingji, 机位=JIWEI_SHORT.get(shot.get("机位",""), shot.get("机位","")), 动作调度=shot.get("动作调度",""),
-        台词=taici_html, 时长=dur_disp, 音频=audio_html, 导演备注=shot.get("导演备注",""))
+        台词=taici_html, 时长=dur_disp, 音频=audio_html, 导演备注=shot.get("导演备注",""), 提示词=shot.get("提示词",""))
 
 # ── Step 3: Assemble HTML ──
 def build_html(shots, title="电玩城的大小孩", scene_id="s010", scene_name="第一场"):
@@ -146,18 +151,43 @@ def build_html(shots, title="电玩城的大小孩", scene_id="s010", scene_name
     
     arc_section = '<section id="arc-section" class="scene-section">\n<div class="placeholder-scene">价值弧线 — 待从模块0导入</div>\n</section>'
     
-    info_bar = '<span>{sid} {sname}</span>\n<span>总镜数 <b>{shots}</b></span>\n<span>总时长 <b>{min}′{sec}″</b></span>\n<span class="sep">|</span>\n<span>机位：🔴正打 🟡反打 🟢第三人称 🔵空间环境 🟣插入/切出</span>\n<span class="sep">|</span>\n<button class="btn-refresh" id="btn-refresh" onclick="refreshFromFeishu()">🔄 从飞书刷新</button>\n<span id="refresh-status" class="refresh-status"></span>\n<span class="sep">|</span>\n<button class="btn-refresh" onclick="openSettings()" style="background:var(--row-light);color:var(--text)">⚙</button>\n<button id="toggle-prompt" onclick="var t=document.querySelectorAll(\'#v2-{sid} table\');var h=!t[0].classList.contains(\'hide-c11\');t.forEach(function(x){{x.classList.toggle(\'hide-c11\')}});localStorage.setItem(\'hidePrompt\',h);this.textContent=h?\'显示提示词\':\'隐藏提示词\'">隐藏提示词</button>'.format(
+    info_bar = '<span>{sid} {sname}</span>\n<span>总镜数 <b>{shots}</b></span>\n<span>总时长 <b>{min}′{sec}″</b></span>\n<span class="sep">|</span>\n<span>机位：🔴正打 🟡反打 🟢第三人称 🔵空间环境 🟣插入/切出</span>\n<span class="sep">|</span>\n<button class="btn-refresh" id="btn-refresh" onclick="refreshFromFeishu()">🔄 从飞书刷新</button>\n<span id="refresh-status" class="refresh-status"></span>\n<span class="sep">|</span>\n<button class="btn-refresh" onclick="openSettings()" style="background:var(--row-light);color:var(--text)">⚙</button>'.format(
         sid=scene_id, sname=scene_name, shots=total_shots, min=int(total_dur//60), sec=int(total_dur%60))
     
-    v2_table = '''<div class="table-wrap">
-<table>
-<colgroup>
-<col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"><col class="c7"><col class="c8"><col class="c9"><col class="c10"><col class="c11">
-</colgroup>
-<thead><tr><th>#</th><th>运镜</th><th>空间关系</th><th>摄影机</th><th>机位</th><th>动作调度</th><th>台词</th><th>时长</th><th>音频</th><th>导演备注</th><th>提示词</th></tr></thead>
-<tbody>\n''' + shot_rows + '''\n</tbody>
-</table>
-</div>'''
+    # Build beat-grouped table
+    from collections import OrderedDict
+    beats = OrderedDict()
+    for s in shots:
+        bk = s.get("beat序号", "")
+        if bk not in beats:
+            beats[bk] = {"类型": s.get("beat类型",""), "标题": s.get("beat标题",""), "动作": s.get("节拍动作",""), "shots": []}
+        beats[bk]["shots"].append(s)
+    
+    beat_blocks = []
+    for bk, bd in beats.items():
+        btype = bd["类型"]
+        btitle = bd["标题"]
+        baction = bd["动作"]
+        bshots = bd["shots"]
+        
+        if bk == "空间":
+            # Space label block
+            block = '<div class="beat-section">\n<div class="space-label">▸ 空间建立镜 ({n} 镜)</div>\n<div class="table-wrap">\n<table>\n<colgroup>\n<col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"><col class="c7"><col class="c8"><col class="c9"><col class="c10"><col class="c11">\n</colgroup>\n<thead><tr><th>#</th><th>运镜</th><th>空间关系</th><th>摄影机</th><th>机位</th><th>动作调度</th><th>台词</th><th>时长</th><th>音频</th><th>导演备注</th><th>提示词</th></tr></thead>\n<tbody>\n{rows}\n</tbody>\n</table>\n</div>\n</div>'.format(n=len(bshots), rows="\n".join(build_shot_row(s) for s in bshots))
+        else:
+            label_class = "beat-red" if "戏点" in btype else "beat-dot"
+            title_text = "beat {n}：{t} ({c} 镜)".format(n=bk, t=btitle, c=len(bshots))
+            block = '<div class="beat-section">\n<span class="beat-label {lc}">{bt}</span>\n<span class="beat-title">{title}</span>\n'.format(lc=label_class, bt=btype, title=title_text)
+            if baction:
+                # Split 外界动作/人物反应 at → for line break
+                parts = baction.split('→', 1)
+                action_html = parts[0].strip()
+                if len(parts) > 1:
+                    action_html += '<br>' + parts[1].strip()
+                block += '<div class="beat-action">{action}</div>\n'.format(action=action_html)
+            block += '<div class="table-wrap">\n<table>\n<colgroup>\n<col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"><col class="c7"><col class="c8"><col class="c9"><col class="c10"><col class="c11">\n</colgroup>\n<thead><tr><th>#</th><th>运镜</th><th>空间关系</th><th>摄影机</th><th>机位</th><th>动作调度</th><th>台词</th><th>时长</th><th>音频</th><th>导演备注</th><th>提示词</th></tr></thead>\n<tbody>\n{rows}\n</tbody>\n</table>\n</div>\n</div>'.format(rows="\n".join(build_shot_row(s) for s in bshots))
+        beat_blocks.append(block)
+    
+    v2_table = "\n".join(beat_blocks)
     
     s010_section = '''<section id="{sid}-section" class="scene-section">
 

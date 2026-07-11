@@ -3,11 +3,15 @@
 import http.server
 import json
 import urllib.request
-import urllib.parse
 import os
+import socketserver
 
 PORT = 8089
 DOCROOT = "/volume1/主目录/Hermes/read/done"
+
+class ThreadingHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
+    """Multi-threaded HTTP server — handles concurrent requests."""
+    daemon_threads = True
 
 class ProxyHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
@@ -70,6 +74,6 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
 
 if __name__ == "__main__":
-    server = http.server.HTTPServer(("0.0.0.0", PORT), ProxyHandler)
-    print(f"Shotlist server on :{PORT}")
+    server = ThreadingHTTPServer(("0.0.0.0", PORT), ProxyHandler)
+    print(f"Shotlist server on :{PORT} (threaded)")
     server.serve_forever()
