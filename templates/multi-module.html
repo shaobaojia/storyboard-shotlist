@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
-<title>电玩城的大小孩 · s010 第一场</title>
+<title>{剧本名} · 分镜全篇</title>
 <style>
 :root{--bg:#2b2b2b;--card:#222222;--border:#222222;--text:#e0e0e0;--head:#e0e0e0;--accent:#f43f5e;--green:#22c55e;--row-light:#3a3a3a;--row-dark:#333333}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -12,19 +12,72 @@ body{background:var(--bg);color:var(--text);font:15px/1.6 -apple-system,BlinkMac
 .top h1{color:var(--head);font-size:24px;font-weight:700}
 .top h1 span{color:var(--accent)}
 .sub{color:var(--text);font-size:14px;margin-top:6px}
-input[name=tab]{display:none}
-.tabs{display:flex;gap:0;padding:0;background:var(--card);border-bottom:2px solid var(--accent)}
-.tabs label{display:block;padding:12px 20px;color:var(--text);font-size:14px;font-weight:600;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .2s;cursor:pointer}
-.tabs label:hover{color:var(--head);background:rgba(255,255,255,.03)}
-#tab-v2:checked~.tabs label[for=tab-v2],#tab-arc:checked~.tabs label[for=tab-arc],#tab-beat:checked~.tabs label[for=tab-beat],#tab-v1:checked~.tabs label[for=tab-v1],#tab-prompt:checked~.tabs label[for=tab-prompt]{border-bottom-color:var(--accent);color:var(--head)}
-.tab-content{display:none;padding:24px 0}
-#tab-v2:checked~#v2-storyboard{display:block}
-#tab-arc:checked~#value-arc{display:block}
-#tab-beat:checked~#beat-analysis{display:block}
-#tab-v1:checked~#v1-storyboard{display:block}
-#tab-prompt:checked~#prompt{display:block}
-#v2-storyboard table.v2{font-size:13px}
-#v2-storyboard table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:13px}
+
+/* ── Radio hiding ── */
+input[name=scene],input[name^=sub-]{display:none}
+
+/* ── Scene tabs ── */
+.scene-section{display:none}
+#scene-arc:checked~#arc-section{display:block}
+#scene-s010:checked~#s010-section{display:block}
+/* #scene-s020:checked~#s020-section{display:block} ... */
+.scene-tabs{display:flex;gap:0;padding:0;background:var(--card);border-bottom:2px solid var(--accent);overflow-x:auto}
+.scene-tabs label{display:block;padding:10px 16px;color:#888;font-size:13px;font-weight:600;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .2s;cursor:pointer;white-space:nowrap}
+.scene-tabs label:hover{color:var(--head);background:rgba(255,255,255,.03)}
+#scene-arc:checked~.scene-tabs label[for=scene-arc],
+#scene-s010:checked~.scene-tabs label[for=scene-s010]
+{border-bottom-color:var(--accent);color:var(--head)}
+
+/* ── Sub-tabs ── */
+.sub-tabs{display:flex;gap:0;padding:0;background:var(--bg);border-bottom:1px solid var(--border)}
+.sub-tabs label{display:block;padding:8px 16px;color:var(--text);font-size:13px;font-weight:600;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .2s;cursor:pointer}
+.sub-tabs label:hover{color:var(--head)}
+.sub-content{display:none;padding:16px 0}
+#sub-beat-s010:checked~#beat-s010{display:block}
+#sub-v1-s010:checked~#v1-s010{display:block}
+#sub-v2-s010:checked~#v2-s010{display:block}
+#sub-prompt-s010:checked~#prompt-s010{display:block}
+#sub-beat-s010:checked~.sub-tabs label[for=sub-beat-s010],
+#sub-v1-s010:checked~.sub-tabs label[for=sub-v1-s010],
+#sub-v2-s010:checked~.sub-tabs label[for=sub-v2-s010],
+#sub-prompt-s010:checked~.sub-tabs label[for=sub-prompt-s010]
+{border-bottom-color:var(--accent);color:var(--head)}
+
+/* ── Info bar ── */
+.info-bar{display:flex;gap:24px;flex-wrap:wrap;padding:12px 0;margin-bottom:12px;border-bottom:1px solid var(--border);font-size:13px}
+.info-bar span{color:var(--text)}
+.info-bar b{color:var(--head)}
+.info-bar .sep{color:var(--border);margin:0 4px}
+
+/* ── v2 11-column table ── */
+#v2-s010 table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:13px}
+col.c1{width:42px}col.c2{width:72px}col.c3{width:160px}col.c4{width:110px}col.c5{width:90px}col.c6{width:auto;max-width:300px}col.c7{width:140px}col.c8{width:44px}col.c9{width:120px}col.c10{width:180px}col.c11{width:auto}
+/* Default: prompt visible — hide audio + notes columns */
+col.c9{width:0}col.c10{width:0}col.c6{width:auto;max-width:300px}col.c11{width:auto}
+th:nth-child(9),th:nth-child(10),td:nth-child(9),td:nth-child(10){width:0!important;padding:0!important;overflow:hidden!important;border:none!important;font-size:0!important;max-width:0!important}
+/* Toggled: prompt hidden — show audio + notes, hide prompt */
+.hide-c11 col.c9{width:120px}.hide-c11 col.c10{width:180px}.hide-c11 col.c11{width:0}
+.hide-c11 th:nth-child(9),.hide-c11 th:nth-child(10){width:auto!important;padding:10px 6px!important;overflow:visible!important;border-bottom:2px solid var(--accent)!important;font-size:12px!important;max-width:none!important}
+.hide-c11 td:nth-child(9),.hide-c11 td:nth-child(10){width:auto!important;padding:8px 6px!important;overflow:visible!important;border-bottom:1px solid var(--border)!important;font-size:inherit!important;max-width:none!important}
+.hide-c11 th:nth-child(11){display:none!important}
+.hide-c11 td.c-prompt{display:none!important}
+
+thead th{background:var(--card);color:var(--head);padding:10px 6px;text-align:left;font-weight:600;font-size:12px;white-space:nowrap;position:sticky;top:0;z-index:1;border-bottom:2px solid var(--accent)}
+tbody td{padding:8px 6px;border-bottom:1px solid var(--border);vertical-align:top;word-break:break-word}
+tbody tr:nth-child(odd){background:var(--row-light)}tbody tr:nth-child(even){background:var(--row-dark)}
+tbody tr{transition:background .3s ease}
+tbody tr:hover{background:rgba(244,63,94,.12);box-shadow:inset 2px 0 0 var(--accent)}
+tbody td:nth-child(1){white-space:nowrap}tbody td:nth-child(2){white-space:nowrap}tbody td:nth-child(4){white-space:nowrap}tbody td:nth-child(5){white-space:nowrap}tbody td:nth-child(8){white-space:nowrap}
+.c-num{color:var(--accent);font-weight:700;text-align:center}
+.c-dur{text-align:center;white-space:nowrap;color:var(--green)}
+.c-dialogue{color:#fbbf24}
+.lens-tech{font-size:11px;color:var(--text);opacity:.35}
+.audio-music{color:#fbbf24;font-size:12px}
+.audio-sfx{color:#94a3b8;font-size:11px}
+.c-notes{color:var(--text);font-size:12px}
+.c-prompt{word-break:normal;white-space:pre-line;font-size:12px;line-height:1.5}
+
+/* ── Other tables ── */
 .arc-table{width:100%;border-collapse:collapse;font-size:13px;margin:16px 0}
 .arc-table th{background:var(--card);color:var(--head);padding:8px 6px;text-align:left;font-weight:600;font-size:12px;border-bottom:2px solid var(--accent)}
 .arc-table td{padding:8px 6px;border-bottom:1px solid var(--border);vertical-align:top}
@@ -47,22 +100,8 @@ input[name=tab]{display:none}
 .tag-insert{background:rgba(167,139,250,.12);color:#a78bfa}
 .tag-estab{background:rgba(148,163,184,.12);color:#94a3b8}
 .placeholder{display:flex;align-items:center;justify-content:center;height:200px;color:var(--text);font-size:18px;opacity:.4}
+.placeholder-scene{display:flex;align-items:center;justify-content:center;height:300px;color:var(--text);font-size:18px;opacity:.3}
 .table-wrap{overflow-x:auto;border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px}
-table.v2{width:100%;table-layout:fixed;border-collapse:collapse;font-size:13px}
-col.c1{width:42px}col.c2{width:72px}col.c3{width:160px}col.c4{width:110px}col.c5{width:90px}col.c6{width:auto}col.c7{width:140px}col.c8{width:44px}col.c9{width:120px}col.c10{width:180px}
-thead th{background:var(--card);color:var(--head);padding:10px 6px;text-align:left;font-weight:600;font-size:12px;white-space:nowrap;position:sticky;top:0;z-index:1;border-bottom:2px solid var(--accent)}
-tbody td{padding:8px 6px;border-bottom:1px solid var(--border);vertical-align:top;word-break:break-word}
-tbody tr:nth-child(odd){background:var(--row-light)}tbody tr:nth-child(even){background:var(--row-dark)}
-tbody tr{transition:background .3s ease}
-tbody tr:hover{background:rgba(244,63,94,.12);box-shadow:inset 2px 0 0 var(--accent)}
-tbody td:nth-child(1){white-space:nowrap}tbody td:nth-child(2){white-space:nowrap}tbody td:nth-child(4){white-space:nowrap}tbody td:nth-child(5){white-space:nowrap}tbody td:nth-child(8){white-space:nowrap}
-.c-num{color:var(--accent);font-weight:700;text-align:center}
-.c-dur{text-align:center;white-space:nowrap;color:var(--green)}
-.c-dialogue{color:#fbbf24}
-.lens-tech{font-size:11px;color:var(--text);opacity:.35}
-.audio-music{color:#fbbf24;font-size:12px}
-.audio-sfx{color:#94a3b8;font-size:11px}
-.c-notes{color:var(--text);font-size:12px}
 .beat-section{margin-bottom:32px}
 .beat-label{display:inline-block;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:700;margin-right:8px}
 .beat-dot{background:var(--row-light);color:var(--text)}
@@ -72,9 +111,6 @@ tbody td:nth-child(1){white-space:nowrap}tbody td:nth-child(2){white-space:nowra
 .beat-action b,.beat-reaction b{color:var(--head)}
 .beat-intent{font-size:13px;color:var(--green);margin-top:6px;font-style:italic}
 .space-label{color:var(--green);font-size:13px;font-weight:600;margin-bottom:8px}
-.meta-bar{display:flex;gap:24px;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--border);margin-bottom:20px;font-size:14px}
-.meta-bar span{color:var(--text)}
-.meta-bar b{color:var(--head)}
 h2{color:var(--head);font-size:18px;margin:20px 0 12px}
 h3{color:var(--head);font-size:15px;margin:16px 0 8px}
 p,li{font-size:14px;margin:4px 0}
@@ -84,293 +120,123 @@ ul{padding-left:20px}
 <body>
 <div class="container">
 <header class="top">
-<h1>电玩城的大小孩 — <span>s010 第一场</span></h1>
-<div class="sub">商场过道 · 傍晚 · 2.5m · 34 镜</div>
+<h1>{剧本名} — <span>分镜全篇</span></h1>
+<div class="sub"><!-- 副标题 --></div>
 </header>
-<input type="radio" name="tab" id="tab-v2" checked>
-<input type="radio" name="tab" id="tab-arc">
-<input type="radio" name="tab" id="tab-beat">
-<input type="radio" name="tab" id="tab-v1">
-<input type="radio" name="tab" id="tab-prompt">
-<nav class="tabs">
-<label for="tab-arc">价值弧线</label>
-<label for="tab-beat">节拍分析</label>
-<label for="tab-v1">v1 骨架</label>
-<label for="tab-v2">v2 分镜</label>
-<label for="tab-prompt">提示词</label>
+
+<input type="radio" name="scene" id="scene-arc" checked>
+<input type="radio" name="scene" id="scene-s010">
+<!-- <input type="radio" name="scene" id="scene-s020"> ... -->
+<nav class="scene-tabs">
+<label for="scene-arc">价值弧线</label>
+<label for="scene-s010">s010 第一场</label>
+<!-- <label for="scene-s020">s020 第二场</label> ... -->
 </nav>
-<section id="value-arc" class="tab-content">
-<h2>全篇价值弧线（s010–s080）</h2>
-<p><b>宏观价值：残缺/完整</b>——一个被成年生活压碎的中年男人，通过重新连接内在小孩，从分裂走向完整。</p>
+
+<!-- ═══ 价值弧线 ═══ -->
+<section id="arc-section" class="scene-section">
+<h2>全篇价值弧线</h2>
+<p><b>宏观价值：</b><!-- 二元品质描述 --></p>
 <table class="arc-table">
 <thead><tr><th>场次</th><th>场景概要</th><th>场景价值</th><th>起点极</th><th>终点极</th><th>翻转</th><th>服务关系</th><th>备注</th></tr></thead>
-<tbody>
-<tr><td><b>s010</b></td><td>被骂→误发消息→补救→虚脱→硬币召唤</td><td>控制</td><td>勉强维持</td><td>彻底失控</td><td>是</td><td>宏观弧线起点——被气球炸穿所有防线</td><td>气球爆炸=失控不是他选的</td></tr>
-<tr><td>s020</td><td>妻子来电→挣扎→童年闪回→决定进入</td><td>压抑</td><td>自我约束</td><td>释放</td><td>是</td><td>从被动承受转向主动行动</td><td>童年闪回的力量更强</td></tr>
-<tr><td>s030</td><td>逛电玩城→跳舞机闪腰→假装没事</td><td>年轻</td><td>幻想</td><td>破灭</td><td>是</td><td>身体告诉他:你已经不是小孩了</td><td>咔吧比台词有说服力</td></tr>
-<tr><td>s040</td><td>赛车→被小孩盯→投错币→被叫爷爷</td><td>体面</td><td>勉强维持</td><td>彻底狼狈</td><td>是</td><td>越想体面越狼狈</td><td>被叫爷爷是外部打击</td></tr>
-<tr><td>s050</td><td>摩托→童年回忆→沉迷→较劲→高血压发作</td><td>沉迷</td><td>投入</td><td>崩溃</td><td>是</td><td>防御机制被身体强制拆除</td><td>心率150=身体在喊停</td></tr>
-<tr><td>s060</td><td>推币机→童年记忆→攥币→松手</td><td>冲动</td><td>被牵引</td><td>清醒克制</td><td>否</td><td>第一次主动不重复童年模式</td><td>不翻也是一种推进</td></tr>
-<tr><td>s070</td><td>精神世界→给小孩币筐→男人流泪</td><td>亏欠</td><td>积压</td><td>和解</td><td>是</td><td>三十年亏欠在递出币筐时闭合</td><td>这些币本来也是买给你的</td></tr>
-<tr><td>s080</td><td>门口母子→送币→掏出那枚币→弹向镜头</td><td>执念</td><td>握紧</td><td>释然</td><td>否</td><td>和解后的自然外溢</td><td>币弹向镜头=放它走了</td></tr>
-</tbody>
+<tbody><!-- 每场一行 --></tbody>
 </table>
 <h3>弧线诊断</h3>
-<p><b>多样性：</b>8 场使用 8 种场景价值，零重复。</p>
-<p><b>方向性：</b>全部翻转方向共同推高宏观价值。s060 虽不翻但以不重复童年模式推动修复。</p>
-<p><b>层级递进：</b>外部打击(s010–s040)→内部崩溃与转折(s050–s060)→内在修复与释放(s070–s080)。压→破→立。</p>
 </section>
-<section id="beat-analysis" class="tab-content">
+
+<!-- ═══ s010 ═══ -->
+<section id="s010-section" class="scene-section">
+
+<input type="radio" name="sub-s010" id="sub-beat-s010" checked>
+<input type="radio" name="sub-s010" id="sub-v1-s010">
+<input type="radio" name="sub-s010" id="sub-v2-s010">
+<input type="radio" name="sub-s010" id="sub-prompt-s010">
+<nav class="sub-tabs">
+<label for="sub-beat-s010">节拍分析</label>
+<label for="sub-v1-s010">v1 骨架</label>
+<label for="sub-v2-s010">v2 分镜</label>
+<label for="sub-prompt-s010">提示词</label>
+</nav>
+
+<div class="info-bar">
+<span>🟡 s010 第一场</span>
+<span>总镜数 <b>N</b></span>
+<span>节拍 <b>N</b>（戏点N镜）</span>
+<span>总时长 <b>N′N″</b></span>
+<span class="sep">|</span>
+<span>场景价值 <b><!-- --></b></span>
+<span>视点角色 <b><!-- --></b></span>
+<span>策略 <b><!-- --></b></span>
+<span class="sep">|</span>
+<span>机位：🔴正打 🟡反打 🟢第三人称 🔵空间环境 🟣插入/切出</span>
+<span class="sep">|</span>
+<button id="toggle-prompt" onclick="var t=document.querySelectorAll('.beat-section table');var h=!t[0].classList.contains('hide-c11');t.forEach(function(tb){tb.classList.toggle('hide-c11')});localStorage.setItem('hidePrompt',h);this.textContent=h?'显示提示词':'隐藏提示词'">隐藏提示词</button>
+</div>
+
+<div id="beat-s010" class="sub-content">
 <h2>节拍分析</h2>
-<div class="meta-bar"><span><b>场景价值:</b>控制(勉强维持→彻底失控)</span><span><b>视点角色:</b>男人</span></div>
 <table class="beat-table">
 <thead><tr><th>#</th><th>节拍</th><th>外界动作</th><th>人物反应</th><th>类型</th><th>闭环</th><th>说明</th></tr></thead>
-<tbody>
-<tr><td>1</td><td>被领导打压</td><td>他人:领导电话咆哮+挂断+微信威胁</td><td>移开手机两寸,嘴唇绷紧,试图插话没插进去,瞪屏幕</td><td>⚪填充</td><td>✓</td><td>控制被攻击但尚未失控</td></tr>
-<tr><td>2</td><td>暗骂与犹豫</td><td>自身:愤怒涌上;环境:账单弹出</td><td>按住语音键低声骂,拇指悬发送键微颤,深吸气</td><td>⚪填充</td><td>✓</td><td>控制绷到临界点</td></tr>
-<tr><td>3</td><td>误发消息</td><td>环境:小孩氢气球爆炸</td><td>全身电击抽搐,拇指痉挛碰到发送键,回头→看屏幕,挤出卧槽完蛋了</td><td class="beat-red">🔴戏点</td><td>✓</td><td><b>控制从勉强维持翻到彻底失控</b></td></tr>
-<tr><td>4</td><td>亡羊补牢</td><td>环境:消息已发出</td><td>哆哆嗦嗦长按撤回,狂戳打字,盯屏幕,又补一条</td><td>⚪填充</td><td>✓</td><td>用自我羞辱换回控制感的挣扎</td></tr>
-<tr><td>5</td><td>被确认屈从</td><td>他人:对方回复好的</td><td>身体塌倒,心率110,仰头望天,喘粗气</td><td>⚪填充</td><td>✓</td><td>失控的身体后果</td></tr>
-<tr><td>6</td><td>硬币召唤与闪回</td><td>环境:币滚到脚下</td><td>捡币→摩挲→看电玩城→闪回童年</td><td>⚪填充</td><td>✓</td><td>硬币不是帮他夺回控制,是引向内心</td></tr>
-</tbody>
+<tbody><!-- 节拍数据 --></tbody>
 </table>
 <h3>节奏曲线</h3>
-<p><b>段落一(beat1-2):蓄力</b>——控制被攻击→绷紧→临界。4→7/10,慢→中。</p>
-<p><b>段落二(beat3):爆发</b>——气球爆炸→误发→崩溃。7→10/10,极快。</p>
-<p><b>段落三(beat4-6):漫长余波</b>——补救→虚脱→闪回。10→2→6/10,快→慢→渐暖。</p>
-</section>
-<section id="v1-storyboard" class="tab-content">
+</div>
+
+<div id="v1-s010" class="sub-content">
 <h2>分镜脚本 — v1 骨架</h2>
-<div class="meta-bar"><span><b>场景价值:</b>控制(勉强维持→彻底失控)</span><span><b>戏点策略:</b>外部闯入视角·宽→紧逐级压缩</span></div>
-<div class="v1-beat"><h3>beat1:被领导打压 ⚪</h3><div class="meta"><b>外界动作:</b>领导咆哮+挂断+微信 | <b>人物反应:</b>移手机→绷嘴唇→插话→瞪屏</div><div class="v1-shot"><span class="tag tag-action">动作镜</span>镜03·中全景·三人——男人哈腰行进,手机贴耳</div><div class="v1-shot"><span class="tag tag-trigger">触发</span>镜04·特写·正打——王总O.S.咆哮+嘟挂断,拉跟→停</div></div>
-<div class="v1-beat"><h3>beat2:暗骂与犹豫 ⚪</h3><div class="meta"><b>外界动作:</b>愤怒涌上+账单弹出 | <b>人物反应:</b>语音输入→拇指悬停→深吸气</div><div class="v1-shot"><span class="tag tag-react">反应镜</span>镜05·中近景·正打——按住语音键,低声骂</div><div class="v1-shot"><span class="tag tag-react">反应镜</span>镜06·极特·反打——上摇,拇指悬发送键→账单横幅</div><div class="v1-shot"><span class="tag tag-react">反应镜</span>镜07·近景·正打——看到账单,深吸气,拇指移开</div></div>
-<div class="v1-beat"><h3>beat3:误发消息 🔴戏点</h3><div class="meta" style="color:var(--green)"><b>设计意图:</b>外部闯入,宽→紧逐级压缩,先给反应再揭原因</div><div class="meta"><b>外界动作:</b>小孩气球爆炸 | <b>人物反应:</b>电击→拇指痉挛→回头→崩溃</div><div class="v1-shot"><span class="tag tag-estab">建立</span>镜08·中全景·三人——小孩远处走来+男人前景</div><div class="v1-shot"><span class="tag tag-trigger">触发</span>镜09·近景·插入——气球炸裂,1s</div><div class="v1-shot"><span class="tag tag-react">反应镜</span>镜10·中景·正打——全身电击抽搐,回头瞪</div><div class="v1-shot"><span class="tag tag-react">反应镜</span>镜11·极特·反打——拇指痉挛碰到发送键</div><div class="v1-shot"><span class="tag tag-action">动作镜</span>镜12·中景·反打——小孩哇哇大哭</div><div class="v1-shot"><span class="tag tag-react">反应镜</span>镜13·中景→近景·正打——OTS过脸→拉+微摇,手机入画,表情扭曲</div><div class="v1-shot"><span class="tag tag-action">动作镜</span>镜14·极特·反打——绿色气泡已发送</div><div class="v1-shot"><span class="tag tag-react">反应镜</span>镜15·近景·正打——滑动变焦,眼神空洞,卧槽完蛋了</div></div>
-<div class="v1-beat"><h3>beat4:亡羊补牢 ⚪</h3><div class="meta"><b>外界动作:</b>消息已发送 | <b>人物反应:</b>撤回→狂打字→盯屏→补发</div><div class="v1-shot"><span class="tag tag-react">反应镜</span>镜16·极特·反打——拇指发抖打滑,长按撤回</div><div class="v1-shot"><span class="tag tag-react">反应镜</span>镜17·特写·正打——慌张打字,嘴唇默念</div><div class="v1-shot"><span class="tag tag-react">反应镜</span>镜18·极特·反打——聊天界面,两句话发出</div></div>
-<div class="v1-beat"><h3>beat5:被确认屈从 ⚪</h3><div class="meta"><b>外界动作:</b>对方回复好的 | <b>人物反应:</b>塌倒→心率110→仰头→呼吸</div><div class="v1-shot"><span class="tag tag-trigger">触发</span>镜19·极特·反打——好的弹出</div><div class="v1-shot"><span class="tag tag-react">反应镜</span>镜20·中近景·正打——重新学会呼吸</div><div class="v1-shot"><span class="tag tag-react">反应镜</span>镜21·特写·反打——翻手腕,心率110</div><div class="v1-shot"><span class="tag tag-react">反应镜</span>镜22·中全景·三人——狗笼格栅前景,男人塌靠护栏</div><div class="v1-shot"><span class="tag tag-insert">插入</span>镜23·中景·插入——柯基趴在狗笼上,隔着玻璃瞥向镜头</div></div>
-<div class="v1-beat"><h3>beat6:硬币召唤与闪回 ⚪</h3><div class="meta"><b>外界动作:</b>币滚到脚下 | <b>人物反应:</b>捡币→摩挲→看电玩城→闪回</div><div class="v1-shot"><span class="tag tag-trigger">触发</span>镜24·近景·三人——币筐,一枚弹出</div><div class="v1-shot"><span class="tag tag-trigger">触发</span>镜25·特写·三人——贴地,币旋转→被踢</div><div class="v1-shot"><span class="tag tag-trigger">触发</span>镜26·极特·三人——贴地后跟→侧跟,币顺地砖滚</div><div class="v1-shot"><span class="tag tag-react">反应镜</span>镜27·近景·正打——币撞鞋尖,固定→上摇</div><div class="v1-shot"><span class="tag tag-react">反应镜</span>镜28·中全景·反打——电玩城门口,霓虹灯闪烁,上摇</div><div class="v1-shot"><span class="tag tag-react">反应镜</span>镜29·近景·正打——霓虹光打脸</div><div class="v1-shot"><span class="tag tag-insert">插入</span>镜30·中景·插入——闪回:小男孩街机前拍按键,1UP</div><div class="v1-shot"><span class="tag tag-insert">插入</span>镜31·中景·反打——闪回过肩:小孩手在按键上</div><div class="v1-shot"><span class="tag tag-react">反应镜</span>镜32·全景·正打——门牌俯视,男人从左侧入画,仰头</div><div class="v1-shot"><span class="tag tag-react">反应镜</span>镜33·中景·三人——侧拍,男人面向左,目光移到手中币,缓推</div><div class="v1-shot"><span class="tag tag-insert">插入</span>镜34·中景·插入——闪回:小男主同构图,弧移+仰,缓推</div></div>
-</section>
+</div>
 
-<section id="prompt" class="tab-content">
+<div id="v2-s010" class="sub-content">
+<div class="beat-section">
+<span class="beat-label beat-dot">⚪ 填充</span>
+<span class="beat-title">beat N：节拍名 (N 镜)</span>
+<div class="beat-action"><b>外界动作：</b><!-- --></div>
+<div class="beat-reaction"><b>人物反应：</b><!-- --></div>
+<div class="table-wrap">
+<table>
+<colgroup>
+<col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"><col class="c7"><col class="c8"><col class="c9"><col class="c10"><col class="c11">
+</colgroup>
+<thead><tr><th>#</th><th>运镜</th><th>空间关系</th><th>摄影机</th><th>机位</th><th>动作调度</th><th>台词</th><th>时长</th><th>音频</th><th>导演备注</th><th>提示词</th></tr></thead>
+<tbody><!-- 每镜一行 --></tbody>
+</table>
+</div>
+</div>
+</div>
+
+<div id="prompt-s010" class="sub-content">
 <div class="placeholder">提示词模块 — 待构建</div>
+</div>
+
 </section>
-<section id="v2-storyboard" class="tab-content">
-<div class="meta-bar"><span><b>机位图例:</b>🔴正打 🟡反打 🟢第三人称 🔵空间环境 🟣插入/切出</span><span><b>场景价值:</b>控制(勉强维持→彻底失控)</span><span><b>视点角色:</b>男人</span><span><b>戏点策略:</b>外部闯入视角·宽→紧逐级压缩</span></div>
-<div class="beat-section">
-<div class="space-label">▸ 空间建立镜 (2 镜)</div>
-<div class="table-wrap">
-<table>
-<colgroup>
-<col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"><col class="c7"><col class="c8"><col class="c9"><col class="c10">
-</colgroup>
 
-<thead><tr><th>#</th><th>运镜</th><th>空间关系</th><th>摄影机</th><th>机位</th><th>动作调度</th><th>台词</th><th>时长</th><th>音频</th><th>导演备注</th></tr></thead>
-<tbody>
-<tr>
-<td class="c-num">01</td><td>拉跟</td><td>宠物店橱窗(正中)</td><td>全景 ★<br><span class="lens-tech">24mm·深</span></td><td>🔵环</td><td></td><td><span class="audio-music">—</span><br><span class="audio-sfx">微弱的宠物店背景音</span></td><td class="c-dur">3s</td><td></td><td class="c-notes">冷调荧光。开场第一口气——安静。柯基的慵懒 vs 即将到来的风暴</td>
-</tr>
-<tr>
-<td class="c-num">02</td><td>横移(右)</td><td>[前左] 取币机<br>⤳ 横移 →<br>[右⅓] 👤男人(由远及近)</td><td>近景 ★★★★<br>↓<br>中全 ★★<br><span class="lens-tech">35mm·中→深</span></td><td>🔵环</td><td></td><td><span class="audio-music">—</span><br><span class="audio-sfx">取币机吐币的机械声</span></td><td class="c-dur">5s</td><td></td><td class="c-notes">暖调霓虹灯光。缓摇的节奏建立了从「物」到「人」的视线引导</td>
-</tr>
-</tbody>
-</table>
-</div>
 </div>
 
-<!-- Beat 1 -->
-<div class="beat-section">
-<span class="beat-label beat-dot">⚪ 填充</span>
-<span class="beat-title">beat 1：被领导打压 (3 镜)</span>
-<div class="beat-action"><b>外界动作：</b>领导在电话里咆哮骂人，直接挂断。微信弹出威胁消息：「今晚12点前改完发我。别让我再说第二遍」</div>
-<div class="beat-reaction"><b>人物反应：</b>男人把手机从耳边移开两寸，嘴唇绷紧。嘴张了一半试图插话——没插进去。瞪了一眼屏幕</div>
-<div class="table-wrap">
-<table>
-<colgroup>
-<col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"><col class="c7"><col class="c8"><col class="c9"><col class="c10">
-</colgroup>
-
-<thead><tr><th>#</th><th>运镜</th><th>空间关系</th><th>摄影机</th><th>机位</th><th>动作调度</th><th>台词</th><th>时长</th><th>音频</th><th>导演备注</th></tr></thead>
-<tbody>
-<tr>
-<td class="c-num">03</td><td>横移跟拍</td><td>[中] 👤男人(面朝右)<br>[前] 对向人流(擦过)</td><td>中景 ★★★<br><span class="lens-tech">50mm·中</span></td><td>🟢三</td><td>右手拿手机贴在右耳，面朝右侧向前行进。镜头横移跟拍，看不见脸。前景有对向的人擦身经过。左手边是过道护栏，右手边是商铺</td><td class="c-dialogue">「王总，客户这边已经见过了——方案我今晚回酒店就改出来。」</td><td class="c-dur">4s</td><td><span class="audio-sfx">商场环境音、脚步声、人声嘈杂</span></td><td class="c-notes">自然光+顶光。横移速度与步速同步</td>
-</tr>
-<tr>
-<td class="c-num">04</td><td>拉跟→停</td><td>[中] 👤男人(手机贴右耳)</td><td>特写 ★★★★★<br>↓<br>中景 ★★★<br><span class="lens-tech">50mm·浅→中</span></td><td>🔴正</td><td>右手拿手机贴在右耳。镜头从特写缓缓拉远——他把手机移开两寸，嘴唇绷紧，咬肌凸起。嘴张开试图插话——没插进去。「嘟」对面挂了。他站住脚，镜头停在中近景。咬肌松开又咬紧，太阳穴血管可见。瞪了一眼屏幕，眼白多于瞳孔</td><td class="c-dialogue">「改什么改！客户投诉电话都他妈打到我这儿了！你怎么跟人聊的？」「我不管你什么理由——」「——今天必须改出来。再让客户投诉，你就别干了！」「嘟」</td><td class="c-dur">8s</td><td><span class="audio-sfx">听筒咆哮(O.S.) → 嘟——挂断 → 死寂</span></td><td class="c-notes">浅景深→中景深。拉远的过程让观众从"被骂得只剩一个耳朵"慢慢看到"这个人所有的狼狈"。手机离耳时背景虚化；停下时背景恢复——他又回到商场里了</td>
-</tr>
-
-<tr>
-<td class="c-num">05</td><td>固定</td><td>[中] 📱手机屏幕</td><td>极特 ★★★★★<br><span class="lens-tech">100mm·浅</span></td><td>🟡反</td><td>微信弹出：「今晚12点前改完发我。别让我再说第二遍」</td><td class="c-dialogue">「今晚12点前改完发我。别让我再说第二遍」</td><td class="c-dur">2s</td><td><span class="audio-sfx">微信消息提示音</span></td><td class="c-notes">屏幕亮度在暗调环境中刺眼</td>
-</tr>
-</tbody>
-</table>
-</div>
-</div>
-
-<!-- Beat 2 -->
-<div class="beat-section">
-<span class="beat-label beat-dot">⚪ 填充</span>
-<span class="beat-title">beat 2：暗骂与犹豫 (3 镜)</span>
-<div class="beat-action"><b>外界动作：</b>被压抑的愤怒涌上来（自身）；银行账单通知弹出（环境）</div>
-<div class="beat-reaction"><b>人物反应：</b>按住语音键，嘴唇几乎不动，声音压到极低：「去你大爷的，老子不干了」。拇指悬在发送键上——微颤。看到账单深吸一口气</div>
-<div class="table-wrap">
-<table>
-<colgroup>
-<col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"><col class="c7"><col class="c8"><col class="c9"><col class="c10">
-</colgroup>
-
-<thead><tr><th>#</th><th>运镜</th><th>空间关系</th><th>摄影机</th><th>机位</th><th>动作调度</th><th>台词</th><th>时长</th><th>音频</th><th>导演备注</th></tr></thead>
-<tbody>
-<tr>
-<td class="c-num">06</td><td>手持</td><td>[中] 👤男人(微俯,手搭护栏)<br>[右] 过道护栏</td><td>中近 ★★★<br><span class="lens-tech">50mm·中</span></td><td>🔴正</td><td>往左侧靠了一步，手搭在过道护栏上。举起手机，拇指按住语音键。嘴唇几乎不动——只有下唇微颤——声音压到极低，像从牙缝里挤出来</td><td class="c-dialogue">「去你大爷的，老子不干了」</td><td class="c-dur">4s</td><td><span class="audio-sfx">呼吸声(近)</span></td><td class="c-notes">镜头推进到中近景。护栏在左前景，他的手搭在上面——唯一的支撑点</td>
-</tr>
-<tr>
-<td class="c-num">07</td><td>上摇</td><td>[上] 📱账单横幅<br>[下] 👍拇指+📱输入框</td><td>极特 ★★★★★<br><span class="lens-tech">100mm·浅</span></td><td>🟡反</td><td>「去你大爷的，老子不干了」躺在输入框里。拇指悬在绿色发送键上方——指腹离屏幕不到一毫米，微颤，关节发白。镜头缓缓上摇——屏幕顶端弹出红色银行账单提醒横幅</td><td class="c-dialogue">「去你大爷的，老子不干了」</td><td class="c-dur">5s</td><td><span class="audio-sfx">心跳声(渐入,低频) → 账单提示音(短促)</span></td><td class="c-notes">极浅景深。从拇指/发送键上摇到账单横幅——两个威胁在同一镜内：绿色发送键=自我毁灭，红色账单=现实绞索，冷暖对撞</td>
-</tr>
-
-<tr>
-<td class="c-num">08</td><td>手持</td><td>[中] 👤男人(正)</td><td>近景 ★★★★<br><span class="lens-tech">50mm·中</span></td><td>🔴正</td><td>他看到了账单。瞳孔先缩——然后整个身体松下来。深吸一口气：胸腔从下往上鼓起来，到锁骨停住，再缓缓泄出去。拇指从发送键上移开</td><td></td><td class="c-dur">3s</td><td><span class="audio-sfx">深吸气声 → 缓慢呼出</span></td><td class="c-notes">和镜07 同机位。刚才还是堵在喉咙里的愤怒，现在只剩吞咽的动作</td>
-</tr>
-</tbody>
-</table>
-</div>
-</div>
-
-<!-- Beat 3 -->
-<div class="beat-section">
-<span class="beat-label beat-red">🔴 戏点</span>
-<span class="beat-title">beat 3：误发消息 (7 镜)</span>
-<div class="beat-intent">设计意图：外部闯入视角，宽→紧逐级压缩。触发→反应→反应(拇指)→动作(小孩)→反应(脸先崩)→动作(揭晓绿色气泡)→反应(台词)。先给反应再揭原因。</div>
-<div class="beat-action"><b>外界动作：</b>旁边小孩的氢气球爆炸——「砰！」</div>
-<div class="beat-reaction"><b>人物反应：</b>全身像被电击——脊椎抽搐，双肩耸到耳根，脖子缩进领口。惊吓中拇指痉挛碰到发送键——消息发出。回头瞪眼找气球来源。转回头看屏幕——五官在 1/3 秒内从困惑→惊恐→扭曲，挤出「卧槽完蛋了」</div>
-<div class="table-wrap">
-<table>
-<colgroup>
-<col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"><col class="c7"><col class="c8"><col class="c9"><col class="c10">
-</colgroup>
-
-<thead><tr><th>#</th><th>运镜</th><th>空间关系</th><th>摄影机</th><th>机位</th><th>动作调度</th><th>台词</th><th>时长</th><th>音频</th><th>导演备注</th></tr></thead>
-<tbody>
-<tr>
-<td class="c-num">09</td><td>手持</td><td>[后左] 🎈小孩(远处走来,气球)<br>[前中] 👤男人(正,向左看)<br>[右] 过道护栏</td><td>中全 ★★<br><span class="lens-tech">35mm·深</span></td><td>🟢三</td><td>深吸一口气——还没吐出去。拇指悬发送键。过道远处，一个小孩拿着红色氢气球朝镜头走来。气球炸了</td><td class="c-dialogue">「砰——」</td><td class="c-dur">2s</td><td><span class="audio-sfx">「砰——」(气球爆炸, 干涩刺耳)</span></td><td class="c-notes">冷调顶光。小孩入画时是画面里唯一的高饱和色块(红色气球)</td>
-</tr>
-
-<tr>
-<td class="c-num">10</td><td>手持</td><td>[中] 👤男人(正)</td><td>中景 ★★★<br><span class="lens-tech">50mm·中</span></td><td>🔴正</td><td>全身像被电击：脊椎从腰→颈逐节抽搐，双肩耸到耳根，脖子缩进领口——整个躯干在 1/3 秒内缩小了一圈。拇指落下。眼睛先瞪大（瞳孔放大），然后头向右后方向猛地一转——回头瞪</td><td></td><td class="c-dur">1.5s</td><td><span class="audio-sfx">气球爆炸余音(耳鸣感)</span></td><td class="c-notes">镜头微俯→微仰，跟随他缩→转的动作有微弱的手持感</td>
-</tr>
-<tr>
-<td class="c-num">11</td><td>固定</td><td>[中] 👍拇指(发送键)<br>[下] 📱手机屏幕</td><td>极特 ★★★★★<br><span class="lens-tech">100mm·浅</span></td><td>🟡反</td><td>拇指痉挛——指节不受控制地向下一弹——碰到发送键。绿色气泡弹出。消息发出</td><td></td><td class="c-dur">1s</td><td><span class="audio-sfx">消息发送音(嗖——)</span></td><td class="c-notes">极浅景深。拇指落下的瞬间屏幕虚化——焦点只在「按下去」这个动作</td>
-</tr>
-<tr>
-<td class="c-num">12</td><td>固定</td><td>[中] 🎈红色气球(炸裂)</td><td>近景 ★★★★<br><span class="lens-tech">85mm·浅</span></td><td>🟣插</td><td>气球炸裂——橡胶碎片飞散，绳子弹回</td><td></td><td class="c-dur">1s</td><td><span class="audio-sfx">「砰——」(干涩刺耳)</span></td><td class="c-notes">极短插入。打断呼吸——从"远处走来"突然炸到面前</td>
-</tr>
-<tr>
-<td class="c-num">13</td><td>拉+微摇</td><td>[后中] 👦小孩(哭)<br>[上] 气球绳<br>[前左] 👤男人(侧脸)<br>↓<br>[中] 👤男人(正)<br>[前下] 📱手机背面(入画)</td><td>中景 ★★★<br>↓<br>近景 ★★★★<br><span class="lens-tech">50mm·中→浅</span></td><td>🔴正</td><td>小孩站在原地哇哇大哭，气球只剩一根绳。男人侧脸在前景——转头。镜头缓拉+微摇，从过脸OTS绕到正面近景。手机入画，背面朝镜头——屏幕冷光从下方打上脸。瞳孔在1/3秒内经历「困惑→惊恐→扭曲」：眯眼(读)→猛睁(认出)→眼眶肌肉上挤，嘴角向下一拉又收回</td><td></td><td class="c-dur">4s</td><td><span class="audio-sfx">小孩哭声(渐弱) → 心跳声(突强,单次重击)</span></td><td class="c-notes">一个镜头从"发生了什么"过渡到"这意味着什么"。小孩哭声在拉远中渐弱——外部世界收窄，男人的内心崩塌。手机冷光取代过道自然光</td>
-</tr>
-
-<tr>
-<td class="c-num">14</td><td>固定</td><td>[中] 📱屏幕(绿色气泡已发送)</td><td>极特 ★★★★★<br><span class="lens-tech">100mm·浅</span></td><td>🟡反</td><td>屏幕上——那句大逆不道的话已经变成绿色气泡，发出去了。发送时间是「刚刚」</td><td></td><td class="c-dur">1.5s</td><td><span class="audio-sfx">死寂</span></td><td class="c-notes">绿色气泡在暗调中像一盏不会灭的灯</td>
-</tr>
-<tr>
-<td class="c-num">15</td><td>滑动变焦</td><td>[中] 👤男人(正)</td><td>近景 ★★★★<br><span class="lens-tech">85mm·浅</span></td><td>🔴正</td><td>眼神空洞——瞳孔失焦，像在看屏幕又像什么都没在看。眼皮颤了一下，眼白多于瞳孔。「卧槽完蛋了」从喉咙里挤出来——声音在抖，但眼睛是死的</td><td class="c-dialogue">「卧槽完蛋了！」</td><td class="c-dur">2s</td><td></td><td class="c-notes">保持镜15 的光线和景深。他的脸还在手机屏幕的冷光里</td>
-</tr>
-</tbody>
-</table>
-</div>
-</div>
-
-<!-- Beat 4 -->
-<div class="beat-section">
-<span class="beat-label beat-dot">⚪ 填充</span>
-<span class="beat-title">beat 4：亡羊补牢 (3 镜)</span>
-<div class="beat-action"><b>外界动作：</b>手机屏幕上，那条消息已经发出——绿色气泡赫然在目</div>
-<div class="beat-reaction"><b>人物反应：</b>哆哆嗦嗦长按撤回。拇指狂戳打字：「好的王总，我回酒店就改🌹🤝」发送。盯屏幕——对方没回。心虚。又补一条：「我一定尽全力，请您放心💪」</div>
-<div class="table-wrap">
-<table>
-<colgroup>
-<col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"><col class="c7"><col class="c8"><col class="c9"><col class="c10">
-</colgroup>
-
-<thead><tr><th>#</th><th>运镜</th><th>空间关系</th><th>摄影机</th><th>机位</th><th>动作调度</th><th>台词</th><th>时长</th><th>音频</th><th>导演备注</th></tr></thead>
-<tbody>
-<tr>
-<td class="c-num">16</td><td>固定</td><td>[中] 🤲双手+📱屏幕</td><td>极特 ★★★★★<br><span class="lens-tech">100mm·浅</span></td><td>🟡反</td><td>拇指控制不住地上下跳——指腹离屏幕不到一毫米，抖得像触电。长按绿色气泡——指腹因出汗打滑，滑了两次才按住。弹出菜单。点撤回</td><td></td><td class="c-dur">2.5s</td><td><span class="audio-sfx">手指在屏幕上摩擦的声音</span></td><td class="c-notes">极浅景深。焦点在拇指上——屏幕内容虚化，观众和他一样看不清菜单</td>
-</tr>
-<tr>
-<td class="c-num">17</td><td>手持</td><td>[中] 👤男人(俯视)</td><td>特写 ★★★★★<br><span class="lens-tech">85mm·浅</span></td><td>🔴正</td><td>慌张的表情。眼球快速左右移动——在打字。嘴唇无声地动着——在默念自己打出来的每一个字。画外音：手指急促敲字的声音，节奏快但不均匀，偶尔停一下，然后更快</td><td></td><td class="c-dur">3s</td><td><span class="audio-sfx">手指敲字声(画外, 急促, 节奏不稳)</span></td><td class="c-notes">俯视角度——观众在「低头看他」。这个角度让他的慌张无处可藏</td>
-</tr>
-<tr>
-<td class="c-num">18</td><td>固定</td><td>[中] 📱聊天界面(等待回复)</td><td>特写 ★★★★★<br><span class="lens-tech">100mm·浅</span></td><td>🟡反</td><td>「好的王总，我回酒店就改🌹🤝」已发送。聊天界面静止。1秒。2秒。3秒。对方没回。拇指又开始动——速度比刚才更快——「我一定尽全力，请您放心💪」发送</td><td class="c-dialogue">「好的王总，我回酒店就改🌹🤝」「我一定尽全力，请您放心💪」</td><td class="c-dur">6s</td><td><span class="audio-sfx">手指敲字→静止3秒→又敲(更快)→发送音</span></td><td class="c-notes">屏幕上方的「对方正在输入…」始终没有出现</td>
-</tr>
-</tbody>
-</table>
-</div>
-</div>
-
-<!-- Beat 5 -->
-<div class="beat-section">
-<span class="beat-label beat-dot">⚪ 填充</span>
-<span class="beat-title">beat 5：被确认屈从 (5 镜)</span>
-<div class="beat-action"><b>外界动作：</b>对方回复「好的」——两个字，没有标点，没有表情</div>
-<div class="beat-reaction"><b>人物反应：</b>身体向后倒，屁股砸在长椅边缘。背包撞上椅背闷响——没摘包。翻过左手腕——手环亮起：心率 110。头向后仰，下巴朝天，喉结暴露。盯着天空——不是「看」，是「不看了」</div>
-<div class="table-wrap">
-<table>
-<colgroup>
-<col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"><col class="c7"><col class="c8"><col class="c9"><col class="c10">
-</colgroup>
-
-<thead><tr><th>#</th><th>运镜</th><th>空间关系</th><th>摄影机</th><th>机位</th><th>动作调度</th><th>台词</th><th>时长</th><th>音频</th><th>导演备注</th></tr></thead>
-<tbody>
-<tr>
-<td class="c-num">19</td><td>固定</td><td>[中] 📱屏幕(「好的」)</td><td>极特 ★★★★★<br><span class="lens-tech">100mm·浅</span></td><td>🟡反</td><td>聊天界面静止。两个蓝字弹出来。没有标点，没有表情</td><td class="c-dialogue">「好的」</td><td class="c-dur">5s</td><td><span class="audio-sfx">消息提示音(单次, 短)</span></td><td class="c-notes">蓝字在白色气泡里。观众和他一起盯着这两个字——盯到它的意思慢慢渗进来</td>
-</tr>
-<tr>
-<td class="c-num">20</td><td>手持</td><td>[中] 👤男人(正)</td><td>中近 ★★★<br><span class="lens-tech">50mm·中</span></td><td>🔴正</td><td>他开始呼吸——之前从气球爆炸到现在，他一直憋着。第一口气吸进来的时候胸口有明显的起伏，然后是急促的三四口短呼吸。有点头晕——眼睛失焦，身体微微晃了一下</td><td></td><td class="c-dur">3s</td><td><span class="audio-sfx">急促的呼吸声(近)</span></td><td class="c-notes">镜头保持不动的凝视。观众看着一个人重新学会呼吸</td>
-</tr>
-<tr>
-<td class="c-num">21</td><td>手持</td><td>[上] 手环(心率110)<br>[中] ⌚左手腕</td><td>特写 ★★★★★<br><span class="lens-tech">85mm·浅</span></td><td>🟡反</td><td>翻过左手腕。手环屏幕亮起：心率 110。腕带下面的皮肤汗湿——汗珠在手环边缘聚成一条细线</td><td></td><td class="c-dur">2s</td><td><span class="audio-sfx">手环轻震动+提示音</span></td><td class="c-notes">手环的冷光在暗调中像一个小型监视器</td>
-</tr>
-<tr>
-<td class="c-num">22</td><td>固定</td><td>[后] 商场中庭<br>[中] 👤男人(瘫靠护栏)<br>[前] ▓狗笼格栅</td><td>中全 ★★<br><span class="lens-tech">35mm·深</span></td><td>🟢三</td><td>从宠物店狗笼子后面拍。前景是笼子的黑色格栅——观众透过格栅看。男人向后倒——身体不是坐下来，是塌下来——屁股砸在护栏边缘，滑到地上。背包撞护栏，闷响。没摘包</td><td></td><td class="c-dur">4s</td><td><span class="audio-sfx">背包撞护栏的闷响、身体滑落的摩擦声</span></td><td class="c-notes">笼子格栅在前景——镜头不动机位，格栅将画面切成竖条，男人在格栅后面的地上</td>
-</tr>
-<tr>
-<td class="c-num">23</td><td>固定</td><td>[后] 宠物店内部<br>[前] 狗笼+🐕柯基(紧贴玻璃)</td><td>中景 ★★★<br><span class="lens-tech">50mm·中</span></td><td>🟣插</td><td>透过玻璃——狗笼紧贴橱窗。柯基趴在笼子上面。隔着玻璃，瞥向镜头方向——头只转了三十度，眼睛斜过来。打了个哈欠。把头转回去，继续趴着</td><td></td><td class="c-dur">3s</td><td><span class="audio-sfx">透过玻璃拍摄。暖调橱窗灯光。柯基在画面正中——观众和狗一起看着他</span></td><td class="c-notes">暖调橱窗灯光。柯基在画面正中——观众和狗一起看着他</td>
-</tr>
-</tbody>
-</table>
-</div>
-</div>
-
-<!-- 过渡 + Beat 6 省略，太长不展开 -->
-
-
-<div class="beat-section">
-<span class="beat-label beat-dot">⚪ 填充</span>
-<span class="beat-title">beat 6：硬币召唤与童年闪回 (10 镜)</span>
-<div class="beat-action"><b>外界动作：</b>取币机远处吐着币。一枚弹出来——顺着地砖缝滚——撞在男人皮鞋尖上</div>
-<div class="beat-reaction"><b>人物反应：</b>手伸下来抓住那枚币。蹲着，拇指摩挲币面。抬头——视线顺着币滚来的方向，看到电玩城霓虹灯牌匾闪烁。<b>【闪回】</b>小男孩在街机前疯狂拍打按键，1UP。走到电玩城门口怔怔盯着霓虹灯。回到现实——低头看手心那枚币</div>
-<div class="table-wrap"><table>
-<colgroup>
-<col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"><col class="c7"><col class="c8"><col class="c9"><col class="c10">
-</colgroup>
-
-<thead><tr><th>#</th><th>运镜</th><th>空间关系</th><th>摄影机</th><th>机位</th><th>动作调度</th><th>台词</th><th>时长</th><th>音频</th><th>导演备注</th></tr></thead>
-<tbody>
-<tr><td class="c-num">24</td><td>固定</td><td>[中] 取币机币筐</td><td>近景 ★★★★<br><span class="lens-tech">50mm·中</span></td><td>🟢三</td><td>取币机的币筐。币在筐里堆成小山。一枚弹出来——金属反光一闪——落下，出画</td><td></td><td class="c-dur">2s</td><td><span class="audio-sfx">币弹出来的金属声</span></td><td class="c-notes">暖调。币的反光是画面里最亮的一点</td></tr>
-<tr><td class="c-num">25</td><td>固定</td><td>[下·贴地] 地面(低角度)</td><td>特写 ★★★★★<br><span class="lens-tech">85mm·浅</span></td><td>🟢三</td><td>币从上方入画——在空中翻了两圈——落在地上，边缘着地，像陀螺一样转。一只路人的脚踢到它——币从左侧飞出画</td><td></td><td class="c-dur">2s</td><td><span class="audio-sfx">币在地上旋转的嗡嗡声 → 被踢的短促碰撞声</span></td><td class="c-notes">贴地角度。焦点跟币——背景的行人脚和地面全部虚化</td></tr>
-<tr><td class="c-num">26</td><td>后跟→侧跟</td><td>[中] 🪙币(滚动)<br>[下] 地砖</td><td>极特 ★★★★★<br><span class="lens-tech">100mm·浅</span></td><td>🟢三</td><td>从币后方贴地跟拍——币顺着地砖往前滚。镜头缓缓绕到侧面，金属边缘在滚动中反光。地砖纹理在浅景深中变成模糊的线条</td><td></td><td class="c-dur">3s</td><td><span class="audio-sfx">币在地砖上滚动的金属声(持续)</span></td><td class="c-notes">贴地跟拍。地砖的纹理在浅景深中变成模糊的线条</td></tr>
-<tr><td class="c-num">27</td><td>固定→上摇</td><td>[上] 👤男人(正)<br>[下] 🦶鞋尖</td><td>近景 ★★★★<br><span class="lens-tech">50mm·中</span></td><td>🔴正</td><td>币撞上鞋尖——「叮」。镜头不上摇。停了一拍。然后缓缓上摇：从鞋尖→裤腿→胸口→下巴→脸。露出他的脸。他低头看着脚下的币——眼神是空的。停了两秒，然后向画面右侧缓缓看去</td><td class="c-dialogue">「叮」</td><td class="c-dur">6s</td><td><span class="audio-sfx">「叮」→ 静止 → 上摇 → 呼吸声</span></td><td class="c-notes">上摇速度慢——模拟他从低头到抬头的过程。摇到脸的时候定住</td></tr>
-<tr><td class="c-num">28</td><td>手持·上摇</td><td>[后] 电玩城内部(机台闪烁)<br>[上] 霓虹灯牌匾<br>[中] 年轻人进出<br>[前左] 👤男人(肩)</td><td>中全 ★★<br><span class="lens-tech">35mm·深</span></td><td>🟡反</td><td>视线顺着币滚来的方向望去——年轻人进进出出。镜头缓缓上摇，电玩城门牌入画，霓虹灯牌匾红→蓝→紫轮转闪烁</td><td></td><td class="c-dur">3s</td><td><span class="audio-sfx">电玩城的嘈杂声(从远处传来, 闷)</span></td><td class="c-notes">深景深。霓虹灯在夜景中饱和度高——画面里唯一「活着」的颜色</td></tr>
-<tr><td class="c-num">29</td><td>缓推</td><td>[中] 👤男人(正)</td><td>近景 ★★★★<br><span class="lens-tech">85mm·浅</span></td><td>🔴正</td><td>眼神虚焦——看着镜头方向，瞳孔没有对准任何东西，像在算一道没有答案的题。嘴唇微张，停在那里忘了闭上。镜头缓缓推近——近景收窄，但始终没到特写</td><td></td><td class="c-dur">3s</td><td><span class="audio-sfx">霓虹灯电流声(微弱)</span></td><td class="c-notes">缓推不急。男人的平静不是放松——是终于决定了什么</td></tr>
-<tr><td class="c-num">30</td><td>固定</td><td>[后] 游戏厅环境<br>[中] 👦小男孩<br>[前] 🕹️街机机台</td><td>中景 ★★★<br><span class="lens-tech">50mm·中</span></td><td>🟣插</td><td><b>【闪回·暖调过曝·边缘柔化】</b>十岁左右的小男孩坐在街机前。双手疯狂拍打按键——不是按，是砸。整个身体随着屏幕上的动作左右倾斜。屏幕上跳出「1UP」。小男孩笑得露出豁牙——那种笑没有任何负担，不是放松，是本身就轻</td><td class="c-dialogue">「1UP」</td><td class="c-dur">3s</td><td><span class="audio-sfx">8-bit游戏音效 + 「1UP」提示音</span></td><td class="c-notes">暖调、过曝、边缘柔化。画面像被金色蜂蜜浸过——记忆的颜色</td></tr>
-<tr><td class="c-num">31</td><td>固定</td><td>[中] 🕹️街机屏幕(游戏画面)<br>[前] 👦小孩(后脑勺+手)</td><td>中景 ★★★<br><span class="lens-tech">50mm·中</span></td><td>🟡反</td><td><b>【闪回内·过肩】</b>越过小孩的肩膀。能看到街机屏幕上的游戏画面——像素角色在跳。小孩的手在按键上飞快移动——手指短、指甲里有泥、但动作精准。屏幕上的分数在跳</td><td><span class="audio-music">—</span><br><span class="audio-sfx">按键声(清脆、快节奏)</span></td><td class="c-dur">2s</td><td></td><td class="c-notes">过肩。小孩的后脑勺在前景虚化，焦点在屏幕和手上</td></tr>
-<tr><td class="c-num">32</td><td>固定</td><td>[左→] 👤男人(入画,仰头)<br>[后] 商场过道</td><td>全景 ★<br><span class="lens-tech">50mm·中</span></td><td>🔴正</td><td>门牌位置俯视——男人从左侧入画，走到过道中央，站定。仰头，看向镜头。眼神虚焦，瞳孔没有对准任何东西，像在算一道没有答案的题。嘴唇微张</td><td><span class="audio-music">—</span><br><span class="audio-sfx">电玩城嘈杂声(渐响)</span></td><td class="c-dur">3s</td><td></td><td class="c-notes">从左侧入画的方向呼应了镜28 币的方向——币从左来，人也从左来</td></tr>
-<tr><td class="c-num">33</td><td>缓推</td><td>[左] 👤男人(面向左)<br>[中·手] 🪙币(抬起)</td><td>中景 ★★★<br><span class="lens-tech">85mm·浅</span></td><td>🟢三</td><td>男人面向左侧站着。目光从画外上方缓缓移下——落到抬起的手中那枚币。拇指慢慢滑过币面——摩挲。币上有地砖缝留下的细痕</td><td>—</td><td class="c-dur">4s</td><td><span class="audio-music">微弱的低频弦乐(单音, 入)</span><br><span class="audio-sfx">拇指摩挲金属的细微摩擦声</span></td><td class="c-notes">浅景深。焦点只在币上。最后一镜。暖调霓虹灯的光从画外打在手和币上</td></tr>
-<tr>
-<td class="c-num">34</td><td>弧移+仰</td><td>[后] 游戏厅牌匾<br>[前] 👦小男主(后脑勺)</td><td>中景 ★★★<br><span class="lens-tech">50mm·中</span></td><td>🟣插</td><td>平视侧面——和镜33同样构图。镜头缓缓绕到小男主背后，仰起——牌匾挂在头顶。前景是他小小的后脑勺</td><td></td><td class="c-dur">3s</td><td></td><td class="c-notes">暖调过曝，边缘柔化。与镜33完全对称——同一姿势，同一枚币，三十年的距离</td>
-</tr>
-</tbody>
-</table></div>
-</div>
-</section>
-</div>
+<script>
+(function(){
+  var sceneRadios = document.querySelectorAll('[name=scene]');
+  var savedScene = localStorage.getItem('lastScene');
+  if (savedScene) { var el = document.getElementById(savedScene); if (el) el.checked = true; }
+  sceneRadios.forEach(function(r){ r.addEventListener('change', function(){ localStorage.setItem('lastScene', r.id); }); });
+  var allSubGroups = document.querySelectorAll('[name^=sub-]');
+  var seenGroups = {};
+  allSubGroups.forEach(function(r){
+    var g = r.name; if (seenGroups[g]) return; seenGroups[g] = true;
+    var sceneId = g.replace('sub-', '');
+    var savedSub = localStorage.getItem('lastSub-' + sceneId);
+    if (savedSub) { var el = document.getElementById(savedSub); if (el) el.checked = true; }
+    document.querySelectorAll('[name="' + g + '"]').forEach(function(sr){
+      sr.addEventListener('change', function(){ localStorage.setItem('lastSub-' + sceneId, sr.id); });
+    });
+  });
+  // Restore prompt visibility
+  var hide = localStorage.getItem('hidePrompt');
+  if (hide === 'true') {
+    document.querySelectorAll('.beat-section table').forEach(function(tb){tb.classList.add('hide-c11')});
+    var btn = document.getElementById('toggle-prompt');
+    if (btn) btn.textContent = '显示提示词';
+  }
+})();
+</script>
 </body>
 </html>
