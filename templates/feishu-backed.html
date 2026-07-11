@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>{{TITLE}} · 分镜全篇</title>
+<style>
+:root{--bg:#2b2b2b;--card:#222222;--border:#222222;--text:#e0e0e0;--head:#e0e0e0;--accent:#f43f5e;--green:#22c55e;--row-light:#3a3a3a;--row-dark:#333333}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font:15px/1.6 -apple-system,BlinkMacSystemFont,sans-serif}
+.container{width:100%;padding:24px 32px}
+.top{padding:32px 0 24px;border-bottom:1px solid var(--border);margin-bottom:0}
+.top h1{color:var(--head);font-size:24px;font-weight:700}
+.top h1 span{color:var(--accent)}
+.sub{color:var(--text);font-size:14px;margin-top:6px}
+
+/* ── Radio hiding ── */
+input[name=scene],input[name^=sub-]{display:none}
+
+/* ── Scene tabs ── */
+.scene-section{display:none}
+#scene-arc:checked~#arc-section{display:block}
+#scene-s010:checked~#s010-section{display:block}
+/* #scene-s020:checked~#s020-section{display:block} ... */
+.scene-tabs{display:flex;gap:0;padding:0;background:var(--card);border-bottom:2px solid var(--accent);overflow-x:auto}
+.scene-tabs label{display:block;padding:10px 16px;color:#888;font-size:13px;font-weight:600;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .2s;cursor:pointer;white-space:nowrap}
+.scene-tabs label:hover{color:var(--head);background:rgba(255,255,255,.03)}
+#scene-arc:checked~.scene-tabs label[for=scene-arc],
+#scene-s010:checked~.scene-tabs label[for=scene-s010]
+{border-bottom-color:var(--accent);color:var(--head)}
+
+/* ── Sub-tabs ── */
+.sub-tabs{display:flex;gap:0;padding:0;background:var(--bg);border-bottom:1px solid var(--border)}
+.sub-tabs label{display:block;padding:8px 16px;color:var(--text);font-size:13px;font-weight:600;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .2s;cursor:pointer}
+.sub-tabs label:hover{color:var(--head)}
+.sub-content{display:none;padding:16px 0}
+#sub-beat-s010:checked~#beat-s010{display:block}
+#sub-v1-s010:checked~#v1-s010{display:block}
+#sub-v2-s010:checked~#v2-s010{display:block}
+#sub-prompt-s010:checked~#prompt-s010{display:block}
+#sub-beat-s010:checked~.sub-tabs label[for=sub-beat-s010],
+#sub-v1-s010:checked~.sub-tabs label[for=sub-v1-s010],
+#sub-v2-s010:checked~.sub-tabs label[for=sub-v2-s010],
+#sub-prompt-s010:checked~.sub-tabs label[for=sub-prompt-s010]
+{border-bottom-color:var(--accent);color:var(--head)}
+
+/* ── Info bar ── */
+.info-bar{display:flex;gap:24px;flex-wrap:wrap;padding:12px 0;margin-bottom:12px;border-bottom:1px solid var(--border);font-size:13px}
+.info-bar span{color:var(--text)}
+.info-bar b{color:var(--head)}
+.info-bar .sep{color:var(--border);margin:0 4px}
+
+/* ── v2 11-column table ── */
+#v2-s010 table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:13px}
+col.c1{width:42px}col.c2{width:72px}col.c3{width:160px}col.c4{width:110px}col.c5{width:90px}col.c6{width:auto;max-width:300px}col.c7{width:140px}col.c8{width:44px}col.c9{width:120px}col.c10{width:180px}col.c11{width:auto}
+/* Default: prompt visible — hide audio + notes columns */
+col.c9{width:0}col.c10{width:0}col.c6{width:auto;max-width:300px}col.c11{width:auto}
+th:nth-child(9),th:nth-child(10),td:nth-child(9),td:nth-child(10){width:0!important;padding:0!important;overflow:hidden!important;border:none!important;font-size:0!important;max-width:0!important}
+/* Toggled: prompt hidden — show audio + notes, hide prompt */
+.hide-c11 col.c9{width:120px}.hide-c11 col.c10{width:180px}.hide-c11 col.c11{width:0}
+.hide-c11 th:nth-child(9),.hide-c11 th:nth-child(10){width:auto!important;padding:10px 6px!important;overflow:visible!important;border-bottom:2px solid var(--accent)!important;font-size:12px!important;max-width:none!important}
+.hide-c11 td:nth-child(9),.hide-c11 td:nth-child(10){width:auto!important;padding:8px 6px!important;overflow:visible!important;border-bottom:1px solid var(--border)!important;font-size:inherit!important;max-width:none!important}
+.hide-c11 th:nth-child(11){display:none!important}
+.hide-c11 td.c-prompt{display:none!important}
+
+thead th{background:var(--card);color:var(--head);padding:10px 6px;text-align:left;font-weight:600;font-size:12px;white-space:nowrap;position:sticky;top:0;z-index:1;border-bottom:2px solid var(--accent)}
+tbody td{padding:8px 6px;border-bottom:1px solid var(--border);vertical-align:top;word-break:break-word}
+tbody tr:nth-child(odd){background:var(--row-light)}tbody tr:nth-child(even){background:var(--row-dark)}
+tbody tr{transition:background .3s ease}
+tbody tr:hover{background:rgba(244,63,94,.12);box-shadow:inset 2px 0 0 var(--accent)}
+tbody td:nth-child(1){white-space:nowrap}tbody td:nth-child(2){white-space:nowrap}tbody td:nth-child(4){white-space:nowrap}tbody td:nth-child(5){white-space:nowrap}tbody td:nth-child(8){white-space:nowrap}
+.c-num{color:var(--accent);font-weight:700;text-align:center}
+.c-dur{text-align:center;white-space:nowrap;color:var(--green)}
+.c-dialogue{color:#fbbf24}
+.lens-tech{font-size:11px;color:var(--text);opacity:.35}
+.audio-music{color:#fbbf24;font-size:12px}
+.audio-sfx{color:#94a3b8;font-size:11px}
+.c-notes{color:var(--text);font-size:12px}
+.c-prompt{word-break:normal;white-space:pre-line;font-size:12px;line-height:1.5}
+
+/* ── Other tables ── */
+.arc-table{width:100%;border-collapse:collapse;font-size:13px;margin:16px 0}
+.arc-table th{background:var(--card);color:var(--head);padding:8px 6px;text-align:left;font-weight:600;font-size:12px;border-bottom:2px solid var(--accent)}
+.arc-table td{padding:8px 6px;border-bottom:1px solid var(--border);vertical-align:top}
+.arc-table tr:nth-child(odd){background:var(--row-light)}
+.arc-table tr:nth-child(even){background:var(--row-dark)}
+.beat-table{width:100%;border-collapse:collapse;font-size:13px;margin:16px 0}
+.beat-table th{background:var(--card);color:var(--head);padding:8px 6px;text-align:left;font-weight:600;font-size:12px;border-bottom:2px solid var(--accent);white-space:nowrap}
+.beat-table td{padding:8px 6px;border-bottom:1px solid var(--border);vertical-align:top;font-size:13px}
+.beat-table tr:nth-child(odd){background:var(--row-light)}
+.beat-table tr:nth-child(even){background:var(--row-dark)}
+.beat-table .beat-red{color:var(--accent);font-weight:700}
+.v1-beat{margin-bottom:28px;padding:16px;background:var(--card);border:1px solid var(--border);border-radius:6px}
+.v1-beat h3{color:var(--head);font-size:15px;margin-bottom:8px}
+.v1-beat .meta{font-size:12px;color:var(--text);margin-bottom:8px}
+.v1-shot{margin:6px 0 6px 16px;font-size:13px;color:var(--text)}
+.v1-shot .tag{display:inline-block;padding:1px 6px;border-radius:3px;font-size:11px;margin-right:6px}
+.tag-trigger{background:rgba(244,63,94,.15);color:var(--accent)}
+.tag-action{background:rgba(34,197,94,.12);color:var(--green)}
+.tag-react{background:rgba(251,191,36,.12);color:#fbbf24}
+.tag-insert{background:rgba(167,139,250,.12);color:#a78bfa}
+.tag-estab{background:rgba(148,163,184,.12);color:#94a3b8}
+.placeholder{display:flex;align-items:center;justify-content:center;height:200px;color:var(--text);font-size:18px;opacity:.4}
+.placeholder-scene{display:flex;align-items:center;justify-content:center;height:300px;color:var(--text);font-size:18px;opacity:.3}
+.table-wrap{overflow-x:auto;border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px}
+
+/* ── Refresh button ── */
+.btn-refresh{padding:4px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600}
+.btn-refresh:hover{opacity:.85}
+.btn-refresh:disabled{opacity:.4;cursor:default}
+.refresh-status{font-size:11px;margin-left:8px}
+.refresh-status.ok{color:var(--green)}.refresh-status.err{color:var(--accent)}
+
+/* ── Settings panel ── */
+.settings-panel{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:999;justify-content:center;align-items:center}
+.settings-panel.show{display:flex}
+.settings-box{background:var(--card);padding:24px;border-radius:8px;width:420px;max-width:90vw}
+.settings-box h3{color:var(--head);margin-bottom:16px}
+.settings-box label{display:block;color:var(--text);font-size:12px;margin:8px 0 4px}
+.settings-box input{width:100%;padding:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);border-radius:4px;font-size:13px}
+.settings-box .btn-row{display:flex;gap:8px;margin-top:16px}
+.settings-box button{padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:600}
+.btn-save{background:var(--accent);color:#fff}.btn-save:hover{opacity:.85}
+.btn-cancel{background:var(--row-light);color:var(--text)}.btn-cancel:hover{background:var(--row-dark)}
+.beat-section{margin-bottom:32px}
+.beat-label{display:inline-block;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:700;margin-right:8px}
+.beat-dot{background:var(--row-light);color:var(--text)}
+.beat-red{background:var(--accent);color:#fff}
+.beat-title{color:var(--head);font-size:15px;font-weight:600;margin:8px 0 4px}
+.beat-action,.beat-reaction{font-size:13px;color:var(--text);margin:2px 0;padding-left:12px;border-left:2px solid var(--border)}
+.beat-action b,.beat-reaction b{color:var(--head)}
+.beat-intent{font-size:13px;color:var(--green);margin-top:6px;font-style:italic}
+.space-label{color:var(--green);font-size:13px;font-weight:600;margin-bottom:8px}
+h2{color:var(--head);font-size:18px;margin:20px 0 12px}
+h3{color:var(--head);font-size:15px;margin:16px 0 8px}
+p,li{font-size:14px;margin:4px 0}
+ul{padding-left:20px}
+</style>
+</head>
+<body>
+<div class="container">
+<header class="top">
+<h1>{{TITLE}} — <span>分镜全篇</span></h1>
+<div class="sub"><!-- 副标题 --></div>
+</header>
+
+{{SCENE_TABS}}
+
+<!-- ═══ 价值弧线 ═══ -->
+{{ARC_SECTION}}
+
+{{SCENE_SECTIONS}}</section>
+
+</div>
+
+<!-- Settings Panel -->
+<div id="settings-panel" class="settings-panel">
+<div class="settings-box">
+<h3>飞书 API 设置</h3>
+<label>App ID</label>
+<input id="cfg-app-id" placeholder="cli_xxx">
+<label>App Secret</label>
+<input id="cfg-app-secret" type="password" placeholder="••••">
+<label>App Token（多维表格 URL 中 /base/ 后面那段）</label>
+<input id="cfg-app-token" placeholder="OwBSbEQS...">
+<label>Table ID（URL 中 ?table= 后面那段）</label>
+<input id="cfg-table-id" placeholder="tbl2gBoyb...">
+<div class="btn-row">
+<button class="btn-save" onclick="saveSettings()">保存</button>
+<button class="btn-cancel" onclick="closeSettings()">取消</button>
+</div>
+</div>
+</div>
+
+<script>
+// Tab persistence
+(function(){
+  var sceneRadios = document.querySelectorAll('[name=scene]');
+  var savedScene = localStorage.getItem('lastScene');
+  if (savedScene) { var el = document.getElementById(savedScene); if (el) el.checked = true; }
+  sceneRadios.forEach(function(r){ r.addEventListener('change', function(){ localStorage.setItem('lastScene', r.id); }); });
+  var allSubGroups = document.querySelectorAll('[name^=sub-]');
+  var seenGroups = {};
+  allSubGroups.forEach(function(r){
+    var g = r.name; if (seenGroups[g]) return; seenGroups[g] = true;
+    var sceneId = g.replace('sub-', '');
+    var savedSub = localStorage.getItem('lastSub-' + sceneId);
+    if (savedSub) { var el = document.getElementById(savedSub); if (el) el.checked = true; }
+    document.querySelectorAll('[name="' + g + '"]').forEach(function(sr){
+      sr.addEventListener('change', function(){ localStorage.setItem('lastSub-' + sceneId, sr.id); });
+    });
+  });
+  var hide = localStorage.getItem('hidePrompt');
+  if (hide === 'true') {
+    document.querySelectorAll('.beat-section table').forEach(function(tb){tb.classList.add('hide-c11')});
+    var btn = document.getElementById('toggle-prompt');
+    if (btn) btn.textContent = '显示提示词';
+  }
+})();
+
+// ── Feishu Refresh ──
+var JIWEI_SHORT = {"🔴 正打":"🔴正","🟡 反打":"🟡反","🟢 第三人称":"🟢三","🔵 空间环境":"🔵环","🟣 插入/切出":"🟣插"};
+
+function getSettings(){
+  var raw = localStorage.getItem('feishu_cfg');
+  return raw ? JSON.parse(raw) : null;
+}
+
+function openSettings(){
+  var cfg = getSettings();
+  if (cfg) {
+    document.getElementById('cfg-app-id').value = cfg.app_id || '';
+    document.getElementById('cfg-app-secret').value = cfg.app_secret || '';
+    document.getElementById('cfg-app-token').value = cfg.app_token || '';
+    document.getElementById('cfg-table-id').value = cfg.table_id || '';
+  }
+  document.getElementById('settings-panel').classList.add('show');
+}
+
+function closeSettings(){
+  document.getElementById('settings-panel').classList.remove('show');
+}
+
+function saveSettings(){
+  var cfg = {
+    app_id: document.getElementById('cfg-app-id').value.trim(),
+    app_secret: document.getElementById('cfg-app-secret').value.trim(),
+    app_token: document.getElementById('cfg-app-token').value.trim(),
+    table_id: document.getElementById('cfg-table-id').value.trim()
+  };
+  localStorage.setItem('feishu_cfg', JSON.stringify(cfg));
+  closeSettings();
+  refreshFromFeishu();
+}
+
+function setStatus(text, cls){
+  var el = document.getElementById('refresh-status');
+  if (!el) return;
+  el.textContent = text;
+  el.className = 'refresh-status ' + (cls || '');
+}
+
+async function refreshFromFeishu(){
+  var cfg = getSettings();
+  if (!cfg || !cfg.app_id) { openSettings(); return; }
+  
+  var btn = document.getElementById('btn-refresh');
+  if (btn) btn.disabled = true;
+  setStatus('连接中...', '');
+  
+  // Helper: call Feishu via local proxy (avoids CORS)
+  async function feishuCall(url, headers, body) {
+    var resp = await fetch('/api/feishu', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({url: url, headers: headers || {}, body: body || null})
+    });
+    return resp.json();
+  }
+  
+  try {
+    // 1. Get token (via proxy)
+    var tokenData = await feishuCall(
+      'https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal',
+      {'Content-Type': 'application/json'},
+      {app_id: cfg.app_id, app_secret: cfg.app_secret}
+    );
+    if (tokenData.code !== 0) throw new Error('Token: ' + tokenData.msg);
+    var token = tokenData.tenant_access_token;
+    
+    // 2. Fetch records (via proxy)
+    var allRecords = [];
+    var pageToken = null;
+    setStatus('拉取数据...', '');
+    
+    do {
+      var feishuUrl = 'https://open.feishu.cn/open-apis/bitable/v1/apps/' + cfg.app_token + '/tables/' + cfg.table_id + '/records?page_size=50';
+      if (pageToken) feishuUrl += '&page_token=' + pageToken;
+      var data = await feishuCall(feishuUrl, {'Authorization': 'Bearer ' + token});
+      if (data.code !== 0) throw new Error('Fetch: ' + data.msg);
+      allRecords = allRecords.concat(data.data.items || []);
+      pageToken = data.data.has_more ? data.data.page_token : null;
+    } while (pageToken);
+    
+    setStatus('重建表格...', '');
+    
+    // 3. Normalize & build rows
+    function norm(v){
+      if (Array.isArray(v) && v.length && v[0].text !== undefined) {
+        return v.map(function(x){return x.text}).join('');
+      }
+      return (v !== null && v !== undefined) ? String(v) : '';
+    }
+    
+    var shots = [];
+    allRecords.forEach(function(r){
+      var f = r.fields || {};
+      var s = {
+        record_id: r.record_id || '',
+        jinghao: norm(f['镜号']),
+        yunjing: norm(f['运镜']),
+        kongjian: norm(f['空间关系']),
+        jingbie: norm(f['景别']),
+        jiaoduan: norm(f['焦段']),
+        jingshen: norm(f['景深']),
+        jiwei: norm(f['机位']),
+        dongzuo: norm(f['动作调度']),
+        taici: norm(f['台词']),
+        shichang: parseFloat(f['时长(秒)']) || 0,
+        yinpin: norm(f['音频']),
+        beizhu: norm(f['导演备注']),
+        tishici: norm(f['提示词'])
+      };
+      if (s.jinghao) shots.push(s);
+    });
+    shots.sort(function(a,b){ return a.jinghao.localeCompare(b.jinghao, undefined, {numeric:true}); });
+    
+    // 4. Build HTML
+    var rowsHtml = '';
+    shots.forEach(function(s){
+      // Parse 景别: framing lines + ↓ separator + lens-tech span
+      var raw = s.jingbie.trim();
+      var lensMatch = raw.match(/(\d+mm·(?:浅|中|深)(?:→(?:浅|中|深))?)/);
+      var lensHtml = '';
+      var framing = raw;
+      if (lensMatch) {
+        lensHtml = '<br><span class="lens-tech">' + lensMatch[1] + '</span>';
+        framing = (raw.substring(0, lensMatch.index) + raw.substring(lensMatch.index + lensMatch[0].length)).trim();
+      }
+      var sheyingji;
+      if (framing.indexOf('↓') !== -1) {
+        var parts = framing.split('↓');
+        sheyingji = parts[0].trim() + '<br>↓<br>' + parts[1].trim() + lensHtml;
+      } else {
+        sheyingji = framing + lensHtml;
+      }
+      
+      var yinpin = s.yinpin;
+      var audioHtml;
+      if (yinpin && yinpin.trim() && yinpin.trim() !== '—') {
+        audioHtml = '<span class="audio-sfx">' + yinpin.replace(/\n/g,'<br>') + '</span>';
+      } else {
+        audioHtml = '<span class="audio-music">—</span>';
+      }
+      
+      var dur = s.shichang ? Math.round(s.shichang) + 's' : '';
+      var taiciHtml = s.taici ? '<td class="c-dialogue">' + s.taici + '</td>' : '<td></td>';
+      
+      rowsHtml += '<tr>' +
+        '<td class="c-num">' + s.jinghao + '</td>' +
+        '<td>' + s.yunjing + '</td>' +
+        '<td>' + s.kongjian + '</td>' +
+        '<td>' + sheyingji + '</td>' +
+        '<td>' + (JIWEI_SHORT[s.jiwei] || s.jiwei) + '</td>' +
+        '<td>' + s.dongzuo + '</td>' +
+        taiciHtml +
+        '<td class="c-dur">' + dur + '</td>' +
+        '<td>' + audioHtml + '</td>' +
+        '<td class="c-notes">' + s.beizhu + '</td>' +
+        '<td></td>' +
+        '</tr>';
+    });
+    
+    // 5. Replace table body (only if we have data)
+    var tbody = document.querySelector('#v2-s010 tbody');
+    if (tbody && shots.length > 0) {
+      tbody.innerHTML = rowsHtml;
+    } else if (shots.length === 0) {
+      setStatus('无数据，请检查飞书表格', 'err');
+      if (btn) btn.disabled = false;
+      return;
+    }
+    
+    // Update stats
+    var totalDur = shots.reduce(function(a,s){return a + (s.shichang||0)}, 0);
+    setStatus(shots.length + '镜 ' + Math.floor(totalDur/60) + '′' + Math.round(totalDur%60) + '″', 'ok');
+    
+    // Update info bar stats
+    var infoBar = document.querySelector('.info-bar');
+    if (infoBar && infoBar.children.length >= 2) {
+      infoBar.children[1].innerHTML = '总镜数 <b>' + shots.length + '</b>';
+      if (infoBar.children.length >= 3) {
+        infoBar.children[2].innerHTML = '总时长 <b>' + Math.floor(totalDur/60) + '′' + Math.round(totalDur%60) + '″</b>';
+      }
+    }
+    
+  } catch(e) {
+    setStatus('失败: ' + e.message, 'err');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>

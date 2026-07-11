@@ -112,3 +112,41 @@ HTML: `<td>起幅 ★★★★★<br>↓<br>落幅 ★★★</td>`
 ```
 
 阅读流：运镜+空间="画面里有什么，动不动" → 景别+机位="什么镜头" → 动作+台词="干什么说什么"
+
+## 2026-07-11: Feishu-Backed Architecture
+
+Frontend/backend separation achieved. Feishu Bitable as database, HTML as presentation layer.
+
+### Architecture
+```
+Feishu Bitable (DB) → Agent read-bridge (JSON) → build_html.py (assembly) → HTML (browser)
+```
+
+Five steps: (1) Migrate shots into bitable, (2) Read bridge normalizes rich-text → JSON, (3) Template with slots, (4) Assembly script one-command, (5) Browser verification.
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `templates/feishu-backed.html` | Template with CSS + JS refresh + settings panel |
+| `scripts/build_html.py` | Fetch records → normalize → build HTML |
+
+### Browser Refresh
+
+HTML has 🔄 button. First use: click ⚙ to enter App ID/Secret/Token/Table ID (saved to localStorage). Subsequent clicks fetch Feishu API via JS fetch(), rebuild table body, update stats. Zero dependencies.
+
+### Field Mapping (Feishu → v2 11-column)
+
+13 Feishu fields (景别/焦段/景深 split; 摄影机 reconstructed at assembly):
+镜号, 运镜, 空间关系, 景别, 焦段, 景深, 机位, 动作调度, 台词, 时长(秒), 音频, 导演备注, 提示词
+
+### MCP Limitation
+
+lark-mcp has no "add field to existing table" tool. Use REST API:
+```bash
+curl -X POST "https://open.feishu.cn/open-apis/bitable/v1/apps/{token}/tables/{id}/fields" ...
+```
+
+### User Preference
+
+Browser-based refresh over CLI commands. Tools must work without Hermes running. file:// may have CORS issues; serve via python3 -m http.server or Hermes dashboard 9119.
