@@ -77,28 +77,33 @@ Docker `nohup` dies on restart. Permanent: UGREEN NAS → Control Panel → Task
 python3 /opt/data/skills/scriptwriting/storyboard-shotlist/scripts/shotlist_server.py
 ```
 
-### Prompt Panel UX (2026-07-11)
+### Prompt Panel UX (2026-07-11, floating window refactor)
+
+**面板架构：浮动窗口（非右滑）。** `position:fixed` + 四条边四角 resize 手柄 + 标题栏 drag。
 
 **面板布局：**
-- 头部：左 `提示词` 标题 + 右 `📋 复制` `📌 钉住` `✕`
-- `.prompt-toggle` 绿色行：`镜 02, 03`（覆盖镜头列表，横排）
+- 头部（drag handle）：左 `提示词` 静态标题 + 右 `⏭` 贴靠右 `⏬` 贴靠下 `📌` 钉住 `✕`
+- `.prompt-covered` 绿色行：`镜 02, 03`（覆盖镜头列表，横排）
 - `.prompt-inherit` 红色行：`↑ 继承自 镜02`（仅继承时显示）
-- `.prompt-text` 正文区：白色文字，微内阴影 + 暗底（像纸浮在面板上）
+- `.prompt-text` 正文区：微内阴影 + 暗底（像纸浮在面板上），右上角 `📋 复制` 按钮
+- `.prompt-body` `overflow-y:auto`，头部不 sticky（浮动窗口不需要）
 
-**标题徽标（badge headings）：**
-- 提示词正文中的子标题自动识别为彩色小徽标：`场景`、`空间锚`、`镜头一`、`镜头二`、`演`、`拍`、`呈`、`@图片N` 等
-- 徽标用 1px 彩色边框 + 小号加粗字体：场景=黄、空间锚=蓝、镜头=紫、演=金、拍=蓝、呈=红
-- 解析函数 `parsePromptBlocks()` 自动拆分行 → 匹配标题 → 生成 `<span class="prompt-badge" style="border-color:...">`
+**交互：**
+- **拖动**：按住标题栏拖到任意位置。约束在视口内（上下左右四边碰撞）。
+- **调整大小**：四条边 + 四角共 8 个不可见手柄（`cursor:n-resize` 等），320×200 最小。
+- **贴靠**：`⏭` 吸到右边缘撑全高 / `⏬` 吸到底边缘撑全宽。
+- **📌 钉住**：切镜头面板不动。遮罩自动隐藏。
+- **状态持久化**：`_saveState()` 在 `closePrompt()` 前保存 `left/top/width/height`，`_restoreState()` 在 `openPrompt()` 后恢复。支持 `left:auto`（右贴靠态）。浏览器刷新前一直记忆。
+- **复制按钮**：正文右上角 `📋 复制`，HTTP 环境 textarea fallback，复制成功弹跳动画。
+- 正文切换淡入 `fadeIn .3s`。
+- 无提示词的镜头也弹面板（显示「暂无提示词」，无复制按钮）。`document.getElementById('prompt-copy')` 可能为 null，必须判空。
+- 点击行 → 群组高亮（`.clicked` 类，仅 `rgba(244,63,94,.12)` 背景）。关闭清空。
 
-**交互增强：**
-- 头部 `sticky` 固顶，长提示词滚动不丢上下文
-- 左边缘拖拽柄调宽度（320–900px）。`closePrompt()` 必须重置 `panel.style.width = ''`——否则拖宽后面板 `right:-540px` + 自设宽度 > 540 会露出一截
-- 📌 钉住按钮：钉住后面板不随点击关闭，遮罩自动隐藏。`closePrompt()` 同时清除钉住状态
-- 面板滑出弹性缓动 `cubic-bezier(.25,.8,.25,1)`
-- 正文切换淡入动画 `fadeIn .3s`
-- 复制按钮弹跳 `copyBounce` 动画。HTTP 环境用 textarea fallback（`document.execCommand('copy')`）
-
-点击任意镜头行 → 右侧滑出面板。所有共享同一提示词的镜头同时高亮（`.clicked` 类，仅背景色 `rgba(244,63,94,.12)`）。关闭时 `.clicked` 全清。
+**标题徽标（C 风格彩色圆点）：**
+- 提示词正文子标题：`● ` 彩色前缀 + 标题文字同色。覆盖 `@图片N` `场景` `空间锚` `人物` `镜头一/二/X` `视角` `光线` `调色` `氛围` 等 — **不标注演/拍/呈**。
+- 所有标题统一 C 风格（`styleMap = {}`），无 A/B 混用。
+- 解析函数 `parsePromptBlocks()` 按行拆分 → 正则匹配标题 → 生成 `<div class="prompt-line-c"><span class="prompt-badge-c">`。
+- 字体：提示词正文用**无衬线**（继承全局），不用衬线。用户认为衬线体在面板中杂乱。
 
 ### 提示词继承（↑ 上线模式）
 
@@ -125,15 +130,9 @@ python3 /opt/data/skills/scriptwriting/storyboard-shotlist/scripts/shotlist_serv
 
 `build_html.py` 组装时按场次筛选，每场产出一个独立的 HTML 文件。提示词跨镜继承 `↑s010-02` 格式自描述，飞书里肉眼可读。
 
-### 标题徽标（badge headings）— 当前状态
+### 标题徽标（badge headings）— 已确定 C 风格
 
-三方案对比中（2026-07-11）：
-- **A 实心小药丸** — `场景`、`人物`：彩色椭圆底 + 深色字
-- **B 左侧竖条** — `空间锚`、`镜头一/二/X`：`border-left` 覆盖整段
-- **C 彩色圆点** — 其余标题：`● ` 彩色前缀
-- **演/拍/呈 不带色标**（用户明确排除）
-
-用户尚未选定，当前三方案并存对照。`parsePromptBlocks()` 在模板 JS 中。
+用户选择 **C 彩色圆点**，全标题统一。`● ` 彩色前缀 + 标题文字同色。覆盖：`@图片N`、`场景`、`空间锚`、`人物`、`镜头一/二/X`、`视角`、`光线`、`调色`、`氛围`等。演/拍/呈 不标注。`parsePromptBlocks()` 在模板 JS 中，`prompt-badge-c` class 渲染。
 
 ### 字体
 
@@ -150,11 +149,16 @@ python3 /opt/data/skills/scriptwriting/storyboard-shotlist/scripts/shotlist_serv
 - **copy button on HTTP**: `navigator.clipboard.writeText` requires HTTPS/localhost. Use textarea fallback (`document.execCommand('copy')`) for `http://192.168.x.x` origins.
 - **JS brace discipline in HTML templates**: When using `patch` to edit JavaScript inside HTML, stray `};` from incomplete replacements silently break all JS on the page (rows lose click handlers, panel won't open, cursor:pointer gone). Symptom: page loads fine visually but zero interactivity. Verify with `{count} - }count = 0` after every JS edit.
 - **`if (sn === shotNum) return` kills highlight**: Skipping the clicked row in the highlight loop prevents its own `.clicked` from being added. Fix: `if (sn === shotNum) { r.classList.add('clicked'); return; }` — highlight self but skip double-count.
-- **closePrompt must reset panel.style.width**: After user drags panel wider, closing leaves a visible sliver because `right:-540px` + custom width > 540px. Fix: `panel.style.width = ''` in closePrompt.
-- **Drag + pin + close interaction**: `closePrompt()` must handle all three states: remove `.open`, remove `.pinned`, reset `style.width`, reset pin button class. Any one missing → visible glitch.
+- **Drag width persistence**: After user drags panel wider, the width persists across open/close (until browser refresh). `closePrompt()` does NOT reset width — it sets `panel.style.right = panel._closeOffset` (computed from current width) to slide fully off screen. `_closeOffset` stored in `openPrompt()` when panel opens.
+- **Drag + pin + close interaction**: `closePrompt()` handles: remove `.open` and `.pinned`, set `panel.style.right` (dynamic close offset, preserves width), hide overlay, clear `.clicked`. Pin button class reset separately.
 - **景别 was SingleSelect**: old version forced single value, losing ↓ transitions. Now changed to Text.
 - **Primary field**: can't delete or change type of the first column. Rename instead.
 - **Field rename**: breaks `build_html.py` field name mapping. Update script if renaming.
 - **Records fetch needs GET**: Feishu token endpoint uses POST, records endpoint uses GET. Proxy detects method by presence/absence of body.
 - **Column visibility**: Only c11 (提示词) is zero-width hidden. c9/c10 always visible. Old hide-c11 toggle removed.
-- **nth-child fragility**: Adding/removing columns shifts all nth-child indices. Must grep + verify all selectors after any column change.
+- **`nth-child` fragility**: Adding/removing columns shifts all nth-child indices. Must grep + verify all selectors after any column change.
+- **closePrompt must call `_saveState()` before removing `.open`**: Floating window model. Omit → next `openPrompt()` can't restore dragged position. Panel either snaps to default or silently fails.
+- **Null-safe copy button**: `document.getElementById('prompt-copy')` is null when prompt text is empty (button not in DOM). `if (copyBtn) { ... }` mandatory — null.onclick = TypeError kills entire `openPrompt`.
+- **`_restoreState` must handle `left:auto`**: After right-snap (`right:8px; left:auto`), `_left='auto'`. Must branch: auto → restore `right`; else → restore `left`. Failure → right-snapped panel reopens on left.
+- **Drag bottom boundary**: `window.innerHeight - panel.offsetHeight - 10`, not fixed `-40`. Failure → drag below viewport.
+- **Brace balance after EVERY JS edit**: `{count} - }count = 0` verification mandatory. Even 1-brace mismatch (e.g., missing `}` after `if (copyBtn) { ... ;}`) kills ALL page interactivity silently.
