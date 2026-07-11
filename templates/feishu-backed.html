@@ -50,12 +50,12 @@ input[name=scene],input[name^=sub-]{display:none}
 .info-bar .sep{color:var(--border);margin:0 4px}
 
 /* ── v2 11-column table ── */
-#v2-s010 table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:13px}
+#v2-s010 table{table-layout:fixed;border-collapse:collapse;font-size:13px}
 col.c1{width:42px}col.c2{width:72px}col.c3{width:160px}col.c4{width:110px}col.c5{width:90px}col.c6{width:auto;max-width:300px}col.c7{width:140px}col.c8{width:44px}col.c9{width:120px}col.c10{width:180px}col.c11{width:0}
 /* 提示词列隐藏（数据供面板读取） */
 th:nth-child(11),td:nth-child(11){width:0!important;padding:0!important;overflow:hidden!important;border:none!important;font-size:0!important;max-width:0!important}
 
-thead th{background:var(--card);color:var(--head);padding:10px 6px;text-align:left;font-weight:600;font-size:12px;white-space:nowrap;position:sticky;top:0;z-index:1;border-bottom:2px solid var(--accent)}
+thead th{background:var(--card);color:var(--head);padding:10px 6px;text-align:left;font-weight:600;font-size:12px;white-space:nowrap;position:sticky;top:0;z-index:1;border-bottom:2px solid var(--accent);border-right:1px solid rgba(255,255,255,.12)}
 tbody td{padding:8px 6px;border-bottom:1px solid var(--border);vertical-align:top;word-break:break-word}
 tbody tr:nth-child(odd){background:var(--row-light)}tbody tr:nth-child(even){background:var(--row-dark)}
 tbody tr:hover{background:rgba(244,63,94,.12)}
@@ -208,6 +208,12 @@ ul{padding-left:20px}
 .resize-handle.se{bottom:-4px;right:-4px;cursor:se-resize}
 .resize-handle.sw{bottom:-4px;left:-4px;cursor:sw-resize}
 .resize-handle.nw{top:-4px;left:-4px;cursor:nw-resize}
+
+/* 列宽拖拽 */
+.col-resize{position:absolute;top:0;right:0;width:5px;height:100%;cursor:col-resize;z-index:1}
+.col-resize:hover,.col-resize.active{background:var(--accent);opacity:.4}
+th{position:relative}
+
 </style>
 </head>
 <body>
@@ -757,6 +763,54 @@ function attachPromptClicks() {
     });
   });
 }
+
+
+// 列宽拖拽
+(function(){
+  document.querySelectorAll('#v2-s010 table thead').forEach(function(thead){
+    var ths = thead.querySelectorAll('th');
+    var table = thead.closest('table');
+    var colgroup = table.querySelector('colgroup');
+    var cols = colgroup ? colgroup.querySelectorAll('col') : [];
+    if (!cols.length) return;
+    
+    ths.forEach(function(th, i){
+      if (i === ths.length - 1) return; // skip last col
+      var handle = document.createElement('div');
+      handle.className = 'col-resize';
+      th.style.position = 'relative';
+      th.appendChild(handle);
+      
+      var startX, startW, resizing = false;
+      handle.addEventListener('mousedown', function(e){
+        resizing = true; startX = e.clientX;
+        // Lock ALL columns in ALL tables to current pixel widths
+        document.querySelectorAll('#v2-s010 colgroup').forEach(function(cg){
+          cg.querySelectorAll('col').forEach(function(c){
+            if (!c.style.width) c.style.width = getComputedStyle(c).width;
+          });
+        });
+        startW = parseFloat(cols[i].style.width);
+        handle.classList.add('active');
+        e.preventDefault(); e.stopPropagation();
+      });
+      document.addEventListener('mousemove', function(e){
+        if (!resizing) return;
+        var nw = Math.max(30, startW + e.clientX - startX);
+        cols[i].style.width = nw + 'px';
+        // Sync same column across ALL beat-section tables
+        document.querySelectorAll('#v2-s010 colgroup').forEach(function(cg){
+          var allCols = cg.querySelectorAll('col');
+          if (allCols[i] && allCols[i] !== cols[i]) allCols[i].style.width = nw + 'px';
+        });
+      });
+      document.addEventListener('mouseup', function(){
+        if (!resizing) return;
+        resizing = false; handle.classList.remove('active');
+      });
+    });
+  });
+})();
 
 // Attach clicks after initial load
 document.addEventListener('DOMContentLoaded', function(){
