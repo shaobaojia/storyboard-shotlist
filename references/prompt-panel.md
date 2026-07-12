@@ -9,8 +9,8 @@
 ## 核心 CSS
 
 ```css
-.prompt-panel{position:fixed;top:40px;right:40px;width:500px;max-width:90vw;height:60vh;
-  max-height:90vh;background:var(--card);border:1px solid var(--accent);
+.prompt-panel{position:fixed;top:40px;right:40px;width:500px;max-width:90vw;height:calc(100vh - 80px);
+  max-height:calc(100vh - 80px);background:var(--card);border:1px solid var(--accent);
   z-index:100;display:none;flex-direction:column;box-shadow:-4px 0 20px rgba(0,0,0,.4);
   border-radius:6px}
 .prompt-panel.open{display:flex;animation:panelIn .35s cubic-bezier(.34,1.56,.64,1)}
@@ -63,12 +63,18 @@ p._restoreState = function(){
 
 mousedown 记录 `resizeStart = {x, y, l, t, w, h}` → mousemove 按方向更新。最小 320×200，最大 90vw×90vh。
 
+## 面板默认尺寸
+
+```
+top:40px; right:40px; width:500px; height:calc(100vh - 80px); max-width:90vw
+```
+
 ## 贴靠按钮
 
 两个快捷定位按钮（统一 11px，与其他按钮一致）：
 
 - **右贴附：** `style.left='auto'; style.right='8px'; style.top='40px'; height=window.innerHeight-80; w=500`
-- **下贴附：** `style.left='40px'; style.top='auto'; style.bottom='8px'; width=window.innerWidth-80; height=45vh`
+- **下贴附：** `style.left='40px'; style.right='40px'; style.top='auto'; style.bottom='8px'; width='auto'; height=45vh`
 
 贴靠后调 `_saveState()`。点下时加 `snap-bounce` class（0.25s 回弹动画）。
 
@@ -96,17 +102,17 @@ mousedown 记录 `resizeStart = {x, y, l, t, w, h}` → mousemove 按方向更�
 .btn-close:hover{background:transparent;color:var(--accent);border-color:var(--accent);transform:scale(1.1)}
 ```
 
-从左到右：钉住 | 右贴附 | 下贴附 | 复制 | ✕。**全部 11px 统一字号，中文全词，红底白字，hover 变空心红框+红字。**
+从左到右：钉住 | 右贴附 | 下贴附 | 复制 | ✕。**全部 11px 统一字号，中文全词，红底白字，hover 变空心红框+红字。** 所有按钮 class 统一为 `panel-btn`。✕ 关闭按钮额外加 `btn-close`。
 
-## 提示词徽标（C 风格 ● 圆点前缀）
+## 提示词徽标解析
 
-`parsePromptBlocks(text)` 识别子标题正则：`/^(@图片\d+|场景|空间锚|人物|镜头[一二三四五六七八九十\d]+|视角|光线|调色|氛围|时长|景别|焦段|景深|机位|运镜)[：:]/`
+`parsePromptBlocks(text)` 识别子标题正则：
+`/^(@图片\\d+|场景|空间锚|人物|镜头[一二三四五六七八九十\\d]+|动作表演|拍摄方式|画面呈现|视角|光线|调色|氛围|风格|时长|景别|焦段|景深|机位|运镜)[：:]/`
 
-**不包含演/拍/呈** — 用户明确要求这三个不作为徽标。
+**C 风格（默认）：** 场景描述字段使用 `●` 彩色圆点前缀。
+**D 风格：** 动作表演/拍摄方式/画面呈现 仅彩色加粗，无圆点前缀，统一石板灰 #94a3b8。
 
-每个标题用对应色的 `●` 圆点前缀 `<span class="prompt-badge-c" style="color:COLOR">HEADING</span>`。
-
-颜色映射：场景#f59e0b / 空间锚#3b82f6 / 镜头#a78bfa / 人物#f59e0b / 视角#10b981 / 其余#6b7280。
+颜色映射：场景#f59e0b / 空间锚#3b82f6 / 人物#10b981 / 镜头#a78bfa / 风格#8b5cf6 / 动作表演/拍摄方式/画面呈现 #94a3b8 / 其余#6b7280。
 
 ## 动效（全 CSS 层，零 layout recalc）
 
@@ -116,7 +122,23 @@ mousedown 记录 `resizeStart = {x, y, l, t, w, h}` → mousemove 按方向更�
 - 贴靠回弹：`snapBounce` 0.25s
 - 滚动条渐显：`scrollbar-color:transparent` → hover `rgba(255,255,255,.15)`
 
-## 列宽拖拽\n\n表头 `<th>` 右边缘 5px 拖拽区域（`cursor:col-resize`）。每张 table 独立绑定。\n\n```js\ndocument.querySelectorAll('#v2-s010 table thead').forEach(function(thead){\n  var ths = thead.querySelectorAll('th');\n  var table = thead.closest('table');\n  var cols = table.querySelector('colgroup').querySelectorAll('col');\n  ths.forEach(function(th, i){\n    if (i === ths.length - 1) return; // skip last col\n    var handle = document.createElement('div');\n    handle.className = 'col-resize';\n    th.appendChild(handle);\n    handle.addEventListener('mousedown', function(e){\n      var startW = parseFloat(cols[i].style.width || getComputedStyle(cols[i]).width);\n      // mousemove: cols[i].style.width = Math.max(30, startW + dx) + 'px'\n    });\n  });\n});\n```\n\n表头右分隔线：`thead th{border-right:1px solid rgba(255,255,255,.12)}`，确保暗底可见。\n\n## ⚠️ 致命坑合集
+## 左侧侧边栏
+
+`position:fixed;left:0;top:50%` 红色竖条 `▶`（12×36px，呼吸脉冲光晕动画）。展开后 48px 宽面板，内含 🔄 和 ⚙ 两个 32×32 方形按钮。状态 localStorage 持久化。
+
+## 页面加载自动刷新
+
+`DOMContentLoaded` 后 800ms，若 `readFeishuConfig()` 返回有效凭证 → 自动调用 `refreshFromFeishu()`。F5 即实时数据。
+
+## 提示词注释 [镜02] 格式
+
+飞书提示词正文中可用 `[...]` 方括号添加注释——用于标注提示词内局部镜头编号与实际 v2 镜号的映射关系（如 `镜头一：[镜02]`）。面板渲染时自动转换为红色同号注释显示，复制时过滤掉 `[...]` 不进入剪贴板。
+
+**飞书写法：** `镜头一：[镜02]` / `镜头二：[镜03]`
+
+**面板显示：** 注释以红色 `var(--accent)` 同号字体显示，`[` `]` 保留。
+
+**复制行为：** `copyBtn.onclick` 和 `fallbackCopy` 中均执行 `.replace(/\[.*?\]/g, '')` 过滤掉注释块。\n\n表头 `<th>` 右边缘 5px 拖拽区域（`cursor:col-resize`）。每张 table 独立绑定。\n\n```js\ndocument.querySelectorAll('#v2-s010 table thead').forEach(function(thead){\n  var ths = thead.querySelectorAll('th');\n  var table = thead.closest('table');\n  var cols = table.querySelector('colgroup').querySelectorAll('col');\n  ths.forEach(function(th, i){\n    if (i === ths.length - 1) return; // skip last col\n    var handle = document.createElement('div');\n    handle.className = 'col-resize';\n    th.appendChild(handle);\n    handle.addEventListener('mousedown', function(e){\n      var startW = parseFloat(cols[i].style.width || getComputedStyle(cols[i]).width);\n      // mousemove: cols[i].style.width = Math.max(30, startW + dx) + 'px'\n    });\n  });\n});\n```\n\n表头右分隔线：`thead th{border-right:1px solid rgba(255,255,255,.12)}`，确保暗底可见。\n\n## ⚠️ 致命坑合集
 
 ### 1. 空提示词镜头打不开面板
 
@@ -156,3 +178,19 @@ if (copyBtn) { copyBtn.onclick = function(){ ... }; }
 ### 7. 拖拽后底部溢出
 
 修复：`Math.min(window.innerHeight - p.offsetHeight - 10, y)`，不硬编码 40。
+
+### 8. ✕ 按钮的 inline onclick 处理
+
+关闭按钮的 onclick 写为 inline HTML 属性（非 JS 事件绑定）：
+
+```html
+<button class="panel-btn btn-close" onclick="
+  var p=document.getElementById('prompt-panel');
+  p.classList.remove('pinned');
+  var b=p.querySelector('.panel-btn.pinned');
+  if(b)b.classList.remove('pinned');
+  closePrompt()
+">✕</button>
+```
+
+必须先解钉再调 `closePrompt()`——因为 `closePrompt` 第一行 `if(pinned)return`，在内部解钉逻辑永远走不到。

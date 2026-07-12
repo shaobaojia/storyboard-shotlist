@@ -680,7 +680,7 @@ v2 第 11 列，HTML `rowspan` 按机位连续段合并。施工期留空，v2 �
 |:---|:---|:---|
 | 动作表演 | 动作调度列 + 台词列 | 剔除摄影机描述。台词用「」紧随动作后。<br>**方向词铁律：** 左右禁（镜头视角），前后允（角色基准）。<br>**画面外禁令：** 禁引本镜不见的元素。 |
 | 拍摄方式 | 运镜列 + 摄影机列 + 机位列 | 编码转自然语言。🟢三侧位从动作调度反推。🔵环=空间环境交代，景别以摄影机列为准。 |
-| 画面呈现 | 动作表演 + 拍摄方式 + 空间关系 | **两步法：** ①推演草稿 ②空间关系收敛。<br>**构图：** 前景/中景/远景 + 左/中/右 + 近/远。<br>**方向词：** 画面呈现有相机视角→左右允许。 |
+| 画面呈现 | 动作表演 + 拍摄方式 + 空间关系 | **两步法：** ①推演草稿 ②空间关系收敛。<br>**构图：** 前景/中景/远景 + 左/中/右 + 近/远。<br>**方向词：** 画面呈现有相机视角→左右允许。<br>**起幅/落幅（运镜镜头）：** 景别变化的运镜镜头，画面呈现拆为三段——「起幅——」描述起幅构图、「运镜动作+焦点转移」在中间独立一行、「落幅——」描述落幅后构图。景别不变的跟拍/手持无需拆分。 |
 
 ### 主光方位（每个镜头独立）
 
@@ -849,6 +849,8 @@ Agent：只改第 7 镜景别列→「已改。镜 6→7→8 景别过渡：中�
 - **patch 在 HTML JS 上静默失败：** `patch(mode='replace')` 编辑 HTML 模板中的 JavaScript 时经常失败——要么旧字符串匹配不到（缩进/换行差异），要么成功但残留碎片（如重复的 `} else { fallbackCopy(text); }` 块、缺闭合 `}` 的 `if (copyBtn)`）。**当 patch 连续失败 2 次时，改用 `execute_code` + `t.replace(old, new)` 做 Python 级别的字符串替换。** HTML 模板的 JS 代码块跨越数十行、含转义字符、缩进不规则——这些都是 `patch` 的匹配短板。每次 JS 编辑后必须验证：`python3 -c "print(html.count('{'), html.count('}'))"`。间隙 0 才放行。
 
 - **提示词面板按钮统一风格：** 全部使用 `panel-btn` class。CSS：`font-size:11px;padding:4px 8px;border:1px solid var(--accent);border-radius:4px;background:var(--accent);color:#fff`。文字用中文全词（钉住/右贴附/下贴附/复制），禁用 emoji 简写。✕ 关闭按钮用 `.btn-close` 加粗大号。**hover：红底 → 空心红框 + 红字**（`background:transparent;color:var(--accent);border-color:var(--accent);transform:translateY(-1px)`）。钉住激活态：`opacity:.7`。**⚠️ 按钮 JS 创建时必须只设 `className`，禁止残留 inline `fontSize`/`padding`——行内样式优于 CSS 类，导致不可控的尺寸不一致。**
+
+- **SKILL.md 编辑铁律：** SKILL.md 的所有编辑必须通过 `skill_manage(action='patch')`，禁止使用裸 `patch()` 或 `execute_code` 直接操作文件。`patch()` 曾导致 SKILL.md 被清空为 0 字节，`skill_manage` 是为 skill 文件专门设计的编辑器，有防清空保护。<br>- **feishu-backed.html 编辑铁律：** HTML 模板文件使用 `execute_code` + Python `t.replace(old, new)` 编辑。此文件包含跨行 JS 含转义字符——`patch()` 匹配常常静默失败或产生碎代码，`execute_code` 是唯一可靠方式。每次编辑后验证 `{` 和 `}` 数量相等。
 
 - **提示词面板徽标配色纪律：** 场景描述字段（场景/空间锚/人物/镜头）与制作字段（动作表演/拍摄方式/画面呈现）必须使用不同色系，禁止颜色复用。当前方案：场景=琥珀#f59e0b、空间锚=蓝#3b82f6、人物=翠绿#10b981、镜头=紫#a78bfa；动作表演/拍摄方式/画面呈现统一石板灰#94a3b8（D 风格，无圆点前缀，仅彩色加粗）。**原则：元数据暖色，制作指令中性色。** 用户明确表示颜色混乱是严重的视觉噪音。
 

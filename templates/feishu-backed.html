@@ -79,7 +79,7 @@ tbody td:nth-child(1){white-space:nowrap}tbody td:nth-child(2){white-space:nowra
 .c-insert{background:rgba(167,139,250,.12);color:#a78bfa}
 
 /* ── 提示词面板 ── */
-.prompt-panel{position:fixed;top:40px;right:40px;width:500px;max-width:90vw;height:60vh;max-height:90vh;background:var(--card);border:1px solid var(--accent);z-index:100;display:none;flex-direction:column;box-shadow:-4px 0 20px rgba(0,0,0,.4);border-radius:6px}
+.prompt-panel{position:fixed;top:40px;right:40px;width:500px;max-width:90vw;height:calc(100vh - 80px);max-height:calc(100vh - 80px);background:var(--card);border:1px solid var(--accent);z-index:100;display:none;flex-direction:column;box-shadow:-4px 0 20px rgba(0,0,0,.4);border-radius:6px}
 .prompt-panel.open{display:flex;animation:panelIn .35s cubic-bezier(.34,1.56,.64,1)}
 .prompt-panel.dragging{box-shadow:-4px 0 30px rgba(0,0,0,.6)!important}
 @keyframes panelIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
@@ -104,6 +104,7 @@ tbody td:nth-child(1){white-space:nowrap}tbody td:nth-child(2){white-space:nowra
 .prompt-inherit{font-size:11px;color:var(--accent);margin-bottom:12px}
 .prompt-text{font-size:14px;line-height:2;color:#d4d4d4;white-space:pre-wrap;background:rgba(0,0,0,.15);border-radius:6px;padding:16px 18px;box-shadow:inset 0 1px 3px rgba(0,0,0,.3),0 1px 0 rgba(255,255,255,.03)}
 .prompt-line{margin-bottom:4px;line-height:1.9;font-size:14px}
+.prompt-note{font-size:inherit;color:var(--accent);margin-left:4px}
 .prompt-spacer{height:8px}
 /* A: 实心小药丸 */
 .prompt-badge-a{display:inline-block;padding:1px 7px;font-size:10px;font-weight:700;border-radius:10px;margin-right:6px;color:#111}
@@ -138,6 +139,7 @@ tbody td:nth-child(1){white-space:nowrap}tbody td:nth-child(2){white-space:nowra
 /* 正文淡入 */
 .prompt-text.fade-in{animation:fadeIn .3s ease}
 @keyframes fadeIn{from{opacity:.3;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+@keyframes sidebarPulse{0%,100%{box-shadow:2px 0 12px rgba(244,63,94,.4)}50%{box-shadow:2px 0 24px rgba(244,63,94,.7)}}
 
 /* ── Other tables ── */
 .arc-table{width:100%;border-collapse:collapse;font-size:13px;margin:16px 0}
@@ -215,6 +217,14 @@ ul{padding-left:20px}
 .col-resize{position:absolute;top:0;right:0;width:5px;height:100%;cursor:col-resize;z-index:1}
 .col-resize:hover,.col-resize.active{background:var(--accent);opacity:.4}
 th{position:relative}
+
+
+/* 可折叠侧边栏 */
+.sidebar{position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:60;display:flex}
+.sidebar-toggle{width:12px;min-height:36px;background:var(--accent);border:none;color:#fff;cursor:pointer;font-size:9px;font-weight:700;border-radius:0 3px 3px 0;padding:6px 2px;writing-mode:vertical-rl;letter-spacing:2px;box-shadow:1px 0 6px rgba(244,63,94,.3);animation:sidebarPulse 2s ease-in-out infinite;flex-shrink:0}
+.sidebar-body{width:0;overflow:hidden;background:var(--card);border:1px solid var(--border);border-left:none;border-radius:0 6px 6px 0;padding:0;display:flex;flex-direction:column;gap:8px;transition:width .3s ease,padding .3s ease;white-space:nowrap}
+.sidebar.open .sidebar-body{width:48px;padding:8px}
+.sidebar-body .btn-refresh{font-size:13px;padding:6px;width:32px;height:32px;text-align:center;white-space:nowrap;display:flex;align-items:center;justify-content:center}
 
 </style>
 </head>
@@ -336,6 +346,7 @@ async function refreshFromFeishu(){
   
   var btn = document.getElementById('btn-refresh');
   if (btn) btn.disabled = true;
+  var fb=document.getElementById('btn-refresh-float'); if(fb)fb.disabled=true;
   setStatus('连接中...', '');
   
   // Helper: call Feishu via local proxy (avoids CORS)
@@ -420,7 +431,7 @@ async function refreshFromFeishu(){
       else audioHtml = '<span class="audio-music">—</span>';
       var dur = s.shichang ? Math.round(s.shichang) + 's' : '';
       var taiciHtml = s.taici ? '<td class="c-dialogue">' + s.taici + '</td>' : '<td></td>';
-      return '<tr><td class="c-num">' + s.jinghao + '</td><td>' + s.yunjing + '</td><td>' + s.kongjian + '</td><td>' + sheyingji + '</td><td>' + (JIWEI_SHORT[s.jiwei]||s.jiwei) + '</td><td>' + s.dongzuo + '</td>' + taiciHtml + '<td class="c-dur">' + dur + '</td><td>' + audioHtml + '</td><td class="c-notes">' + s.beizhu + '</td><td class="c-prompt">' + s.tishici + '</td></tr>';
+      return '<tr><td class="c-num">' + s.jinghao + '</td><td>' + s.yunjing + '</td><td>' + formatKongjian(s.kongjian) + '</td><td>' + sheyingji + '</td><td>' + (JIWEI_SHORT[s.jiwei]||s.jiwei) + '</td><td>' + s.dongzuo + '</td>' + taiciHtml + '<td class="c-dur">' + dur + '</td><td>' + audioHtml + '</td><td class="c-notes">' + s.beizhu + '</td><td class="c-prompt">' + s.tishici + '</td></tr>';
     }
     
     var groups = {}; var order = [];
@@ -451,7 +462,7 @@ async function refreshFromFeishu(){
       container.innerHTML = blocks.join('');
     } else if (shots.length === 0) {
       setStatus('无数据，请检查飞书表格', 'err');
-      if (btn) btn.disabled = false;
+      if (btn) btn.disabled = false; var fb=document.getElementById('btn-refresh-float'); if(fb)fb.disabled=false;
       return;
     }
     
@@ -474,7 +485,7 @@ async function refreshFromFeishu(){
   } catch(e) {
     setStatus('失败: ' + e.message, 'err');
   } finally {
-    if (btn) btn.disabled = false;
+    if (btn) btn.disabled = false; var fb=document.getElementById('btn-refresh-float'); if(fb)fb.disabled=false;
   }
 }
 
@@ -552,12 +563,12 @@ function openPrompt(shotNum, rowElement) {
   // Copy button handler (may not exist if no prompt text)
   var copyBtn = document.getElementById('prompt-copy');
   if (copyBtn) { copyBtn.onclick = function(){
-    var text = promptText || '';
+    var text = (promptText || '').replace(/\[.*?\]/g, '').trim();
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).then(function(){
         var btn = document.getElementById('prompt-copy');
         btn.textContent = '✓ 已复制'; bounceCopyBtn();
-        setTimeout(function(){ btn.textContent = '📋 复制'; }, 2000);
+        setTimeout(function(){ btn.textContent = '复制'; }, 2000);
       }).catch(function(){ fallbackCopy(text); });
     } else { fallbackCopy(text); }
   };
@@ -565,7 +576,7 @@ function openPrompt(shotNum, rowElement) {
   
   function fallbackCopy(text) {
     var ta = document.createElement('textarea');
-    ta.value = text;
+    ta.value = text.replace(/\[.*?\]/g, '').trim();
     ta.style.position = 'fixed'; ta.style.opacity = '0';
     document.body.appendChild(ta);
     ta.select();
@@ -573,7 +584,7 @@ function openPrompt(shotNum, rowElement) {
     document.body.removeChild(ta);
     var btn = document.getElementById('prompt-copy');
     btn.textContent = '✓ 已复制'; bounceCopyBtn();
-    setTimeout(function(){ btn.textContent = '📋 复制'; }, 2000);
+    setTimeout(function(){ btn.textContent = '复制'; }, 2000);
   }
   
   var panelEl = document.getElementById('prompt-panel');
@@ -588,14 +599,14 @@ function formatKongjian(text) {
 }
 function parsePromptBlocks(text) {
   // Style assignments: A=药丸(场景/人物), B=竖条(空间锚/镜头), C=微底(其余)
-  var headingRe = /^(@图片\\d+|场景|空间锚|人物|镜头[一二三四五六七八九十\\d]+|动作表演|拍摄方式|画面呈现|视角|光线|调色|氛围|时长|景别|焦段|景深|机位|运镜)[：:]/;
-  var styleMap = {'动作表演':'D','拍摄方式':'D','画面呈现':'D'};
+  var headingRe = /^(@图片\\d+|场景|空间锚|人物|镜头[一二三四五六七八九十\\d]+|动作表演|拍摄方式|画面呈现|主光方位|视角|光线|调色|氛围|风格|风格块|时长|景别|焦段|景深|机位|运镜)[：:]/;
+  var styleMap = {'动作表演':'D','拍摄方式':'D','画面呈现':'D','主光方位':'D'};
   var colors = {
     '场景':'#f59e0b','空间锚':'#3b82f6','人物':'#10b981','镜头':'#a78bfa','动作表演':'#94a3b8','拍摄方式':'#94a3b8','画面呈现':'#94a3b8',
     '视角':'#10b981','光线':'#f59e0b','调色':'#ec4899',
     '氛围':'#8b5cf6','时长':'#6b7280','景别':'#f43f5e',
     '焦段':'#3b82f6','景深':'#10b981','机位':'#f59e0b',
-    '运镜':'#a78bfa','@图片':'#6b7280'
+    '运镜':'#a78bfa','风格':'#8b5cf6','风格块':'#22d3ee','主光方位':'#94a3b8','@图片':'#6b7280'
   };
   var lines = text.split(/[\n\r]+/);
   var result = '';
@@ -608,7 +619,7 @@ function parsePromptBlocks(text) {
       else if (/^镜头[一二三四五六七八九十\d]+$/.test(key)) key = '镜头';
       var color = colors[key]||'#6b7280';
       var style = styleMap[key]||'C';
-      var body = line.substring(m[0].length).replace(/</g,'&lt;');
+      var body = line.substring(m[0].length).replace(/</g,'&lt;').replace(/\[(.*?)\]/g, '<span class="prompt-note">[$1]</span>');
       
       if (style === 'A') {
         result += '<div class="prompt-line"><span class="prompt-badge-a" style="background:'+color+'">'+m[1]+'</span> '+body+'</div>';
@@ -620,7 +631,7 @@ function parsePromptBlocks(text) {
         result += '<div class="prompt-line-c"><span class="prompt-badge-c" style="color:'+color+'">'+m[1]+'</span> '+body+'</div>';
       }
     } else if (line.trim()) {
-      result += '<div class="prompt-line">'+line.replace(/</g,'&lt;')+'</div>';
+      result += '<div class="prompt-line">'+line.replace(/</g,'&lt;').replace(/\[(.*?)\]/g, '<span class="prompt-note">[$1]</span>')+'</div>';
     } else {
       result += '<div class="prompt-spacer"></div>';
     }
@@ -724,8 +735,7 @@ function parsePromptBlocks(text) {
       p.style.left='auto'; p.style.right='8px'; p.style.top='40px';
       p.style.height=(window.innerHeight-80)+'px'; p.style.width='500px';
     } else {
-      p.style.left='40px'; p.style.right='auto'; p.style.top='auto';
-      p.style.bottom='8px'; p.style.width=(window.innerWidth-80)+'px'; p.style.height='45vh';
+      p.style.left='40px'; p.style.right='40px'; p.style.top='auto'; p.style.bottom='8px'; p.style.width='auto'; p.style.height='45vh'; p.style.maxWidth='none';
     }
     p._saveState();
   }
@@ -819,9 +829,20 @@ function attachPromptClicks() {
   });
 })();
 
-// Attach clicks after initial load
+// Attach clicks after initial load + auto-refresh from Feishu
 document.addEventListener('DOMContentLoaded', function(){
+  // Restore sidebar
+  if (localStorage.getItem('sidebarOpen')==='true'){
+    var s=document.getElementById('sidebar');if(s){s.classList.add('open');s.querySelector('.sidebar-toggle').textContent='◀';}
+  }
   setTimeout(attachPromptClicks, 500);
+  // Auto-fetch if credentials are configured
+  setTimeout(function(){
+    var cfg = readFeishuConfig();
+    if (cfg && cfg.app_id && cfg.app_secret && cfg.app_token && cfg.table_id) {
+      refreshFromFeishu();
+    }
+  }, 800);
 });
 // Also attach after tab switch
 document.querySelectorAll('[name=scene], [name^=sub-]').forEach(function(r){
@@ -829,5 +850,13 @@ document.querySelectorAll('[name=scene], [name^=sub-]').forEach(function(r){
 });
 
 </script>
+
+<div class="sidebar" id="sidebar">
+<button class="sidebar-toggle" onclick="var s=document.getElementById('sidebar');s.classList.toggle('open');this.textContent=s.classList.contains('open')?'◀':'▶';localStorage.setItem('sidebarOpen',s.classList.contains('open'))">▶</button>
+<div class="sidebar-body">
+<button class="btn-refresh" id="btn-refresh-float" onclick="refreshFromFeishu()">🔄</button>
+<button class="btn-refresh" onclick="openSettings()" style="background:var(--row-light);color:var(--text)">⚙</button>
+</div>
+</div>
 </body>
 </html>
