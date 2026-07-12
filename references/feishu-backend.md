@@ -82,7 +82,7 @@ python3 /opt/data/skills/scriptwriting/storyboard-shotlist/scripts/shotlist_serv
 **面板架构：浮动窗口（非右滑）。** `position:fixed` + 四条边四角 resize 手柄 + 标题栏 drag。
 
 **面板布局：**
-- 头部（drag handle）：左 `提示词` 静态标题 + 右 `⏭` 贴靠右 `⏬` 贴靠下 `📌` 钉住 `✕`
+- 头部（drag handle）：左 `提示词` 静态标题 + 覆盖镜头号（`镜 02, 03`，同标题一行） + 右按钮行 `钉住` `右贴附` `下贴附` `复制` `✕`。按钮统一样式：`panel-btn` class，红底白字，hover 变空心红框红字。全中文全词，无 emoji。
 - `.prompt-covered` 绿色行：`镜 02, 03`（覆盖镜头列表，横排）
 - `.prompt-inherit` 红色行：`↑ 继承自 镜02`（仅继承时显示）
 - `.prompt-text` 正文区：微内阴影 + 暗底（像纸浮在面板上），右上角 `📋 复制` 按钮
@@ -94,7 +94,7 @@ python3 /opt/data/skills/scriptwriting/storyboard-shotlist/scripts/shotlist_serv
 - **贴靠**：`⏭` 吸到右边缘撑全高 / `⏬` 吸到底边缘撑全宽。
 - **📌 钉住**：切镜头面板不动。遮罩自动隐藏。
 - **状态持久化**：`_saveState()` 在 `closePrompt()` 前保存 `left/top/width/height`，`_restoreState()` 在 `openPrompt()` 后恢复。支持 `left:auto`（右贴靠态）。浏览器刷新前一直记忆。
-- **复制按钮**：正文右上角 `📋 复制`，HTTP 环境 textarea fallback，复制成功弹跳动画。
+- **复制按钮**：在头部按钮行，`panel-btn` 同款样式。HTTP 环境 textarea fallback，复制成功弹跳动画。
 - 正文切换淡入 `fadeIn .3s`。
 - 无提示词的镜头也弹面板（显示「暂无提示词」，无复制按钮）。`document.getElementById('prompt-copy')` 可能为 null，必须判空。
 - 点击行 → 群组高亮（`.clicked` 类，仅 `rgba(244,63,94,.12)` 背景）。关闭清空。
@@ -162,3 +162,13 @@ python3 /opt/data/skills/scriptwriting/storyboard-shotlist/scripts/shotlist_serv
 - **`_restoreState` must handle `left:auto`**: After right-snap (`right:8px; left:auto`), `_left='auto'`. Must branch: auto → restore `right`; else → restore `left`. Failure → right-snapped panel reopens on left.
 - **Drag bottom boundary**: `window.innerHeight - panel.offsetHeight - 10`, not fixed `-40`. Failure → drag below viewport.
 - **Brace balance after EVERY JS edit**: `{count} - }count = 0` verification mandatory. Even 1-brace mismatch (e.g., missing `}` after `if (copyBtn) { ... ;}`) kills ALL page interactivity silently.
+
+- **`\n` in Feishu text → `<br>` in HTML**: Feishu API returns multi-line text fields with real `\n` characters. HTML renders `\n` as whitespace, not line break. Fields like 空间关系 that use multi-line formatting MUST convert `\n` → `<br>` in BOTH `build_html.py` AND JS `refreshFromFeishu`. 景别 uses `↓` as separator instead — handled by `format_sheyingji()`, no `\n` conversion needed.
+
+- **`<wbr>` for bracket boundaries**: 空间关系 field uses `[位置标签]` format. Insert `<wbr>` before `[` to create soft line-break opportunities so text wraps naturally at bracket boundaries when the column narrows.
+
+- **Inline style cleanup**: After changing button classes via `execute_code`, grep the output for leftover inline `fontSize`/`padding` styles from previous iterations. Inline styles override CSS classes and produce size inconsistencies that are invisible in template diffs. Snap buttons carried `fontSize='14px'` for multiple sessions undetected.
+
+- **Column resize cross-beat sync**: Each beat-section has its own `<table>` with its own `<colgroup>`. On `mousedown`, lock ALL colgroups to current computed pixel widths. On `mousemove`, set the target column width and sync that same column index across ALL colgroups. Without cross-sync, only the table being dragged changes.
+
+- **Column width model**: `table-layout:fixed` + `width:100%`. Most columns use fixed pixel widths (42–180px). Only c6（动作调度）uses `width:auto;max-width:300px` — it absorbs all remaining space. This is NOT proportional — only one elastic column. If resizing narrows c6 below 300px, table overflows with horizontal scrollbars.

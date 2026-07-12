@@ -50,17 +50,17 @@ input[name=scene],input[name^=sub-]{display:none}
 .info-bar .sep{color:var(--border);margin:0 4px}
 
 /* ── v2 11-column table ── */
-#v2-s010 table{table-layout:fixed;border-collapse:collapse;font-size:13px}
-col.c1{width:42px}col.c2{width:72px}col.c3{width:160px}col.c4{width:110px}col.c5{width:90px}col.c6{width:auto;max-width:300px}col.c7{width:140px}col.c8{width:44px}col.c9{width:120px}col.c10{width:180px}col.c11{width:0}
+#v2-s010 table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:13px;min-width:900px}
+col.c1{width:42px}col.c2{width:72px}col.c3{width:160px}col.c4{width:110px}col.c5{width:90px}col.c6{width:auto;max-width:300px}col.c7{width:180px}col.c8{width:44px}col.c9{width:120px}col.c10{width:180px}col.c11{width:0}
 /* 提示词列隐藏（数据供面板读取） */
 th:nth-child(11),td:nth-child(11){width:0!important;padding:0!important;overflow:hidden!important;border:none!important;font-size:0!important;max-width:0!important}
 
 thead th{background:var(--card);color:var(--head);padding:10px 6px;text-align:left;font-weight:600;font-size:12px;white-space:nowrap;position:sticky;top:0;z-index:1;border-bottom:2px solid var(--accent);border-right:1px solid rgba(255,255,255,.12)}
-tbody td{padding:8px 6px;border-bottom:1px solid var(--border);vertical-align:top;word-break:break-word}
+tbody td{padding:8px 6px;border-bottom:1px solid var(--border);vertical-align:top;word-break:break-word;overflow-wrap:break-word}
 tbody tr:nth-child(odd){background:var(--row-light)}tbody tr:nth-child(even){background:var(--row-dark)}
 tbody tr:hover{background:rgba(244,63,94,.12)}
 .prompt-row.clicked td{background:rgba(244,63,94,.12)!important}
-tbody td:nth-child(1){white-space:nowrap}tbody td:nth-child(2){white-space:nowrap}tbody td:nth-child(4){white-space:nowrap}tbody td:nth-child(5){white-space:nowrap}tbody td:nth-child(8){white-space:nowrap}
+tbody td:nth-child(1){white-space:nowrap}tbody td:nth-child(2){white-space:nowrap}tbody td:nth-child(4){white-space:nowrap;min-width:90px}tbody td:nth-child(5){white-space:nowrap}tbody td:nth-child(8){white-space:nowrap}
 .c-num{color:var(--accent);font-weight:700;text-align:center}
 .c-dur{text-align:center;white-space:nowrap;color:var(--green)}
 .c-dialogue{color:#fbbf24}
@@ -114,6 +114,8 @@ tbody td:nth-child(1){white-space:nowrap}tbody td:nth-child(2){white-space:nowra
 .prompt-line-c{margin-bottom:4px}
 .prompt-line-c .prompt-badge-c{font-size:12px;font-weight:700;margin-right:4px}
 .prompt-line-c .prompt-badge-c::before{content:"● ";color:inherit;margin-right:2px}
+.prompt-line-d{margin-bottom:4px}
+.prompt-line-d .prompt-badge-d{font-size:13px;font-weight:700;margin-right:6px}
 .prompt-body .lens-tech{font-size:11px;opacity:.35}
 .prompt-empty{display:flex;align-items:center;justify-content:center;height:100%;color:var(--text);opacity:.3;font-size:15px}
 .prompt-row{cursor:pointer}
@@ -161,7 +163,7 @@ tbody td:nth-child(1){white-space:nowrap}tbody td:nth-child(2){white-space:nowra
 .tag-estab{background:rgba(148,163,184,.12);color:#94a3b8}
 .placeholder{display:flex;align-items:center;justify-content:center;height:200px;color:var(--text);font-size:18px;opacity:.4}
 .placeholder-scene{display:flex;align-items:center;justify-content:center;height:300px;color:var(--text);font-size:18px;opacity:.3}
-.table-wrap{overflow-x:auto;border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px}
+.table-wrap{overflow-x:auto;border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;-webkit-overflow-scrolling:touch}
 
 /* ── Refresh button ── */
 .btn-refresh{padding:4px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600}
@@ -581,12 +583,15 @@ function openPrompt(shotNum, rowElement) {
     document.getElementById('prompt-overlay').classList.add('show');
   }
 }
+function formatKongjian(text) {
+  return text.replace(/\n/g, '<br>').replace(/\[/g, '<wbr>[');
+}
 function parsePromptBlocks(text) {
   // Style assignments: A=药丸(场景/人物), B=竖条(空间锚/镜头), C=微底(其余)
-  var headingRe = /^(@图片\d+|场景|空间锚|人物|镜头[一二三四五六七八九十\d]+|视角|光线|调色|氛围|时长|景别|焦段|景深|机位|运镜)[：:]/;
-  var styleMap = {};
+  var headingRe = /^(@图片\\d+|场景|空间锚|人物|镜头[一二三四五六七八九十\\d]+|动作表演|拍摄方式|画面呈现|视角|光线|调色|氛围|时长|景别|焦段|景深|机位|运镜)[：:]/;
+  var styleMap = {'动作表演':'D','拍摄方式':'D','画面呈现':'D'};
   var colors = {
-    '场景':'#f59e0b','空间锚':'#3b82f6','人物':'#f59e0b','镜头':'#a78bfa',
+    '场景':'#f59e0b','空间锚':'#3b82f6','人物':'#10b981','镜头':'#a78bfa','动作表演':'#94a3b8','拍摄方式':'#94a3b8','画面呈现':'#94a3b8',
     '视角':'#10b981','光线':'#f59e0b','调色':'#ec4899',
     '氛围':'#8b5cf6','时长':'#6b7280','景别':'#f43f5e',
     '焦段':'#3b82f6','景深':'#10b981','机位':'#f59e0b',
@@ -609,6 +614,8 @@ function parsePromptBlocks(text) {
         result += '<div class="prompt-line"><span class="prompt-badge-a" style="background:'+color+'">'+m[1]+'</span> '+body+'</div>';
       } else if (style === 'B') {
         result += '<div class="prompt-line-b" style="border-color:'+color+'"><span class="prompt-badge-b" style="color:'+color+'">'+m[1]+'</span> '+body+'</div>';
+      } else if (style === 'D') {
+        result += '<div class="prompt-line-d"><span class="prompt-badge-d" style="color:'+color+'">'+m[1]+'</span> '+body+'</div>';
       } else {
         result += '<div class="prompt-line-c"><span class="prompt-badge-c" style="color:'+color+'">'+m[1]+'</span> '+body+'</div>';
       }
