@@ -7,6 +7,8 @@ trigger: 用户提到"分镜""shot list""镜头拆分""分析剧本""审分镜""
 
 # 电影级分镜脚本生成器（模块化）
 
+> **⚠️ 加载本 skill 后，必须先读取 `CURRENT_STATE.md`（与本 SKILL.md 同目录）获取当前活跃项目、数据源入口 URL 和接续上下文。禁止跳过此步骤直接搜索本地文件。**
+
 ## 前置条件
 
 - 用户将剧本整理为 Obsidian 笔记，一次一场戏
@@ -400,37 +402,7 @@ v1 骨架输出为 Markdown 节拍拆分视图。v2 全量输出为 HTML 文件�
 
 **HTML 输出格式：** 使用 EDL 暗调主题（灵感来自 NLE 剪辑台配色）、10 列固定宽表格（`table-layout:fixed` + 统一 `colgroup`）、节拍分组色标（⚪ 灰 / 🔴 红）。台词列金色、时长列绿色。HTML 模板保存于 `references/html-template.html`。
 
-**HTML 列序与宽度（v2 最终约定·11列）：**
-
-| col | 列名 | 宽度 | nowrap | 说明 |
-|:---|:---|:---|:---|:---|
-| c1 | 镜号 | 42px | ✓ | |
-| c2 | 运镜 | 72px | ✓ | |
-| c3 | 空间关系 | 160px | — | [位置标签]+emoji, `<br>`分行 |
-| c4 | 摄影机 | 110px | ✓ | 景别(两字+★)+焦段·景深(35%透明) |
-| c5 | 机位 | 90px | ✓ | emoji+单字(正反三环插) |
-| c6 | 动作调度 | auto | — | |
-| c7 | 台词 | 140px | — | 无台词留空 |
-| c8 | 时长 | 44px | ✓ | |
-| c9 | 音频 | 120px | — | 音乐(金#fbbf24)+音效(灰蓝#94a3b8) |
-| c10 | 导演备注 | 180px | — | |
-| c11 | 提示词 | 160px | — | 空 `<td></td>`，beat 级 rowspan 合并 |
-
-nowrap：`tbody td:nth-child(1){white-space:nowrap}tbody td:nth-child(2){white-space:nowrap}tbody td:nth-child(4){white-space:nowrap}tbody td:nth-child(5){white-space:nowrap}tbody td:nth-child(8){white-space:nowrap}`
-
-> **归纳逻辑：** 摄影机=景别+焦段+景深（DP实拍时三项一起决定）。音频=音乐+音效（都归听觉）。运镜保持独立（镜头语言≠技术参数）。提示词=从分镜数据拼给 AI 的输出，独立于导演读的分镜列。13列精简为10列，后加提示词扩展至11列。
-
-**HTML 列重排避坑：** 修改列序时必须同步更新三处，缺一不可：
-1. `<colgroup>` 中的 `<col class="cN">` 顺序
-2. CSS 中的 `col.cN{width}` 映射（class 编号绑定宽度，不是物理位置）
-3. `<thead>` 中的 `<th>` 顺序
-4. 每个 `<tr>` 中的 `<td>` 顺序
-
-**常见翻车：** 只重排了 `<td>` 顺序但没改 `<colgroup>`，导致物理列 5 拿的是 class c5 的宽度但 class c5 实际绑定的是旧物理列 5 的宽度——看起来像"改对了但宽度不对"。解法：列重排后 `<colgroup>` 必须用顺序编号 c1→c2→c3…c10，不要跳号。然后用 CSS 统一调宽度。
-
-**脚本定位 td 的坑：** 用正则 `re.finditer(r'<td', rest)` 定位某行的第 N 列时，注意 offset 计算。`c-num">XX</td>` 标记后面的第一个 `<td` 是 col2（运镜），不是 col1。10 列布局：col3（空间关系）= `td_starts[2]`，col4（摄影机）= `td_starts[3]`，col7（台词）= `td_starts[6]`，col9（音频）= `td_starts[8]`。
-
-**⚠️ `str.replace()` 全局替换翻车：** 用 Python 的 `content.replace(old_row, new_row)` 修改 HTML 行时，如果多镜有相同的行内容，全部会被替换，导致表格大面积崩溃。必须用**位置索引**：`content[:start] + new + content[end:]`。并**从后往前处理**（`for sn in reversed(shots)`）避免位移。备选方案——按**内容特征**判断（如 `'audio-' in td`）而非按列号盲换，更稳健。
+**归纳逻辑：** 摄影机=景别+焦段+景深（DP实拍时三项一起决定）。音频=音乐+音效（都归听觉）。运镜保持独立（镜头语言≠技术参数）。提示词=从分镜数据拼给 AI 的输出，独立于导演读的分镜列。13列精简为10列，后加提示词扩展至11列。
 
 **机位列可视化约定：** 五种机位用五色圆点标记，同时保留文字标签。meta-bar 中必须放机位图例。
 
@@ -559,18 +531,7 @@ v2 保留节拍分组标题和设计意图行，将每个节拍的镜头展开�
 
 #### 提示词列（c11）
 
-v2 第 11 列，HTML `rowspan` 按机位连续段合并。施工期留空，v2 锁定后一次性填充。⚠️ rowspan 只在锁定后填——施工期镜号变动会连带翻合并范围。
-
-**添加步骤（用脚本）：**
-1. CSS 加 `col.c11{width:160px}`
-2. 每个 `<colgroup>` 加 `<col class="c11">`
-3. 每个 `<thead>` 加 `<th>提示词</th>`
-4. 每个 v2 `<tr>`（含 `c-notes` 的行）末尾 `</tr>` 前加 `<td></td>`
-5. 填内容时用 `rowspan="N"` 合并连续镜号
-
-**提示词列显示开关：** info-bar 末尾加按钮，点击切换 c11 的显示/隐藏。同时控制 c9+c10（音频+备注）——显示提示词时隐藏它们释放空间给 c6+c11。⚠️ `visibility: collapse` 和 `display:none` 在 `<col>` 元素上浏览器兼容性不稳定。**可靠方案：`nth-child` + `!important`**（详见 `references/css-pitfalls.md`）。
-
-**⚠️ CSS 验证纪律：** 每次修改 CSS 或布局后，用浏览器工具自检——`browser_navigate` 打开 HTML，`browser_click` 切到对应 Tab，`browser_vision` 截图验证。不让用户代劳。
+v2 第 11 列，HTML `rowspan` 按机位连续段合并。施工期留空，v2 锁定后一次性填充。⚠️ rowspan 只在锁定后填——施工期镜号变动会连带翻合并范围。提示词列始终零宽隐藏作为面板数据源，具体 CSS 实现见 `references/css-pitfalls.md`。
 
 ---
 
@@ -625,15 +586,23 @@ v2 第 11 列，HTML `rowspan` 按机位连续段合并。施工期留空，v2 �
 
 ### 执行步骤
 
+> **⚠️ 飞书架构铁律：** 当前活跃项目使用飞书多维表格作为数据库（详见 `CURRENT_STATE.md`）。模块4 的数据读写必须走飞书 API，禁止从浏览器 DOM 抓数据、禁止从本地静态 HTML 读数据、禁止只输出文本不写回。
+
 1. **确认合并范围：** 导演口头指定镜号范围。Agent 确认镜号 x-xx 对应 v2 表的哪些行。
-2. **读取 v2 数据：** 用 read_file 读取指定镜号范围内的全部行，提取动作调度、运镜、摄影机、机位、空间关系。
-3. **按模板生成：** 每个镜头按「动作表演 / 拍摄方式 / 画面呈现 / 主光方位」四行填写。动作表演取自动作调度列+台词列，拍摄方式取自运镜+摄影机+机位列，画面呈现融合动作表演+拍摄方式+空间关系列（两步法），主光方位从场景描述+空间锚推演。共享声明（角色/场景/空间锚/风格块）只写一次。**导演备注不在任何一行的原料来源中。**
-4. **填入合并格：** 用 `rowspan="N"` 在 c11 列合并对应行，提示词正文填入合并格。
+2. **首次拉取全场数据（会话内缓存）：** 从 `feishu_config.json` 读取凭证，拉取当前场次全部记录（`page_size=50`），提取镜号/机位/空间关系/摄影机/动作调度/台词/提示词/beat序号/场次。用于理解 beat 结构、相邻镜头空间关系、已有提示词的共享声明。同一会话内后续生成复用缓存，除非用户修改了分镜表数据时重新拉取。
+3. **确认目标镜号：** 从缓存中筛选导演指定的镜号范围，按 beat 分组，确认机位连续段和合并边界。
+4. **按模板生成：** 每个镜头按「动作表演 / 拍摄方式 / 画面呈现 / 主光方位」四行填写。动作表演取自动作调度列+台词列，拍摄方式取自运镜+摄影机+机位列，画面呈现融合动作表演+拍摄方式+空间关系列（两步法），主光方位从场景描述+空间锚推演。共享声明（角色/场景/空间锚/风格块）只写一次。**导演备注不在任何一行的原料来源中。**
+5. **通过飞书 API 写回提示词：** 使用 `terminal` 执行 `curl` 调用飞书 OpenAPI：
+   - PUT `https://open.feishu.cn/open-apis/bitable/v1/apps/{app_token}/tables/{table_id}/records/{record_id}`
+   - 如果多镜合并为一个提示词组，每镜的 record 都写入相同文本（或第一镜写正文，其余写 `↑s010-NN` 继承标记）
+   - 写入后提示用户在浏览器点 🔄 验证。
+
+> **⚠️ FETCH+PUT 踩踏陷阱：** 连续多次 FETCH→改→PUT 时，第二次 FETCH 可能拿到第一次 PUT 之前的旧版本，导致修复被覆盖。**一次性完成：一次 FETCH → 改全部需要改的内容 → 一次 PUT。** 不要拆成多次小修小补。PUT 后必须 GET 验证改动已落地。
 
 ### 模板结构
 
 ```
-@图片1 — {角色速写：年龄、体型、特征、服装}
+人物：统计本段合并镜头中出现的所有角色，逐一列出——「@图片1 — 男人，38-42岁……」「@图片2 — 小孩，5-6岁……」。数据源：扫描动作调度列中的角色名称 + 空间关系列的 emoji 角色标签。不继承上一段提示词的人物行。若有参考图，格式为「@图片N — {角色速写}」；无参考图时写「{角色名}，{年龄}，{体型}，{特征}，{服装}」。
 
 场景：{有参考图时：直接声明引用，如"@图片3 控制场景"}
       {无参考图时：一句话概括环境元素，不展开。}
@@ -641,10 +610,10 @@ v2 第 11 列，HTML `rowspan` 按机位连续段合并。施工期留空，v2 �
 空间锚：{基于物理锚点的空间关系——谁在哪、挨着什么、朝哪走、与周围物件的距离和相对位置。
          禁止写左右/前后/上下等画面方向词——那是机位列的活。}
 
-镜头一：
-- **动作表演（原「演」）：** 角色做了什么。原料：v2 动作调度列 + 台词列，**严格剔除**其中属于摄影机的描述（「镜头如何」「入画」「出画」）。台词原文紧随动作后，用「」包裹。只写角色的肌肉动作、视线、呼吸、微表情、台词。对象不是角色时写物体行为。**方向词铁律：**「左右」依赖镜头视角→禁止；「前后」基于角色自身基准→允许。没有镜头就没有左右。**画面外禁令：** 禁止引用本镜头画面内不可见的元素，否则视频模型会硬塞入画。
-- **拍摄方式（原「拍」）：** 摄影机怎么拍。原料：**仅** v2 运镜列 + 摄影机列 + 机位列，三列以外的一切（导演备注、灯光描述、氛围词）都不属于拍摄方式。自然语言，不写内部编码。🔴正 → 正面拍摄/过肩正面。🟡反 → POV视角/背面过肩。🟢三 → 侧面客观视角（相机侧位从动作调度列反推，如「右手拿手机贴右耳」→相机在角色右侧）。🔵环 → 空间环境交代（景别以摄影机列为准，不固定为全景）。🟣插 → 插入/闪回。
-- **画面呈现（原「呈」）：** 最终画面——观众看到什么。**两步法：** ①用动作表演和拍摄方式推演画面草稿。②将草稿与空间关系逐位比对——空间关系是空间事实的唯一基准，用它收敛草稿。比对通过→输出；比对发现方位冲突→显式标注「⚠ 空间冲突：xxx，需人工定夺」。**构图要求：** 将空间关系的纵深编码翻译为构图语言（前景/中景/远景、左/中/右、近/远），先定构图骨架，再叠动作和运镜。**方向词规则：** 画面呈现在相机视角下描述，「左/右」是基于画面的视觉事实→允许。与动作表演的方向词禁令不矛盾。
+镜头一：[镜NN]
+动作表演（原「演」）：谁做了什么。原料：v2 动作调度列 + 台词列，**严格剔除**其中属于摄影机的描述（「镜头如何」「入画」「出画」）。台词原文紧随动作后，用「」包裹。**主语铁律：** 每个镜头的动作表演必须以明确的主语开头——「男人……」「气球……」「拇指……」。多角色镜头中必须写明每个动作的执行者，禁止用省略主语的方式罗列动作。只写角色的肌肉动作、视线、呼吸、微表情、台词。对象不是角色时写物体行为。**方向词铁律：**「左右」依赖镜头视角→禁止；「前后」基于角色自身基准→允许。没有镜头就没有左右。**画面外禁令：** 禁止引用本镜头画面内不可见的元素，否则视频模型会硬塞入画。
+拍摄方式（原「拍」）：摄影机怎么拍、拍谁。原料：**仅** v2 运镜列 + 摄影机列 + 机位列，三列以外的一切（导演备注、灯光描述、氛围词）都不属于拍摄方式。自然语言，不写内部编码。**主体铁律：** 机位描述必须绑定主体——🔴正 →「正面拍摄男人」；🟡反 →「男人 POV」或「透过小孩的眼睛看」；🟢三 →「侧面客观视角，相机在男人右侧」；🔵环 → 空间环境交代（景别以摄影机列为准，不固定为全景）；🟣插 → 插入/闪回。多角色镜头中禁止只写「正面拍摄」不写拍谁。
+画面呈现（原「呈」）：最终画面——观众看到什么。**两步法：** ①用动作表演和拍摄方式推演画面草稿。②将草稿与空间关系逐位比对——空间关系是空间事实的唯一基准，用它收敛草稿。比对通过→输出；比对发现方位冲突→显式标注「⚠ 空间冲突：xxx，需人工定夺」。**构图要求：** 将空间关系的纵深编码翻译为构图语言（前景/中景/远景、左/中/右、近/远），先定构图骨架，再叠动作和运镜。**方向词规则：** 画面呈现在相机视角下描述，「左/右」是基于画面的视觉事实→允许。与动作表演的方向词禁令不矛盾。
 
 镜头二：
 ...
@@ -660,13 +629,13 @@ v2 第 11 列，HTML `rowspan` 按机位连续段合并。施工期留空，v2 �
 
 **机位编码 → 自然语言转换表：**
 
-| v2 编码 | 提示词写法 |
-|:---|:---|
-| 🔴正 | 正面拍摄 / 过肩正面 |
-| 🟡反 | POV视角 / 背面过肩 |
-| 🟢三 | 侧面客观视角 |
-| 🔵环 | 空间环境交代（景别以摄影机列为准，不固定为全景） |
-| 🟣插 | 插入 / 闪回 |
+| v2 编码 | 提示词写法 | 说明 |
+|:---|:---|:---|
+| 🔴正 | 正面拍摄{角色} | 需写明拍摄对象 |
+| 🟡反 | {角色}POV | 需写明谁的视角 |
+| 🟢三 | 侧面客观视角，相机在{角色}{方位} | 需写明相机相对谁的位置 |
+| 🔵环 | 空间环境交代 | 景别以摄影机列为准，不固定为全景 |
+| 🟣插 | 插入/闪回 | |
 
 **最终形态：** 等画面呈现稳定后，演进为单行自然语言（动作表演+拍摄方式+画面呈现合一），不再分三行。
 
@@ -674,11 +643,13 @@ v2 第 11 列，HTML `rowspan` 按机位连续段合并。施工期留空，v2 �
 
 > **v2 动作调度列是完整的导演语言。** "调度"天然包含角色行为和摄影机关系——这不是污染，不需要清洗。提示词模块的任务是从中提取角色行为部分归动作表演，摄影机部分归拍摄方式，各取所需，不意味着原料有错。
 
+**⚠️ 画面外禁令（全局）：** 提示词全文——场景、空间锚、动作表演、画面呈现——禁止描述当前画面内不可见的任何元素。AI 视频模型会把提示词中提到的每个名词塞进画面。画外对象（如「摄影机背后有电玩城」）不要写、不要暗示、不要用否定句提（「没有 XX」也会触发）。只写画面内实际存在、观众能看到的东西。
+
 三层各取各的数据源：
 
 | 行 | v2 数据源 | 规则 |
 |:---|:---|:---|
-| 动作表演 | 动作调度列 + 台词列 | 剔除摄影机描述。台词用「」紧随动作后。<br>**方向词铁律：** 左右禁（镜头视角），前后允（角色基准）。<br>**画面外禁令：** 禁引本镜不见的元素。 |
+| 动作表演 | 动作调度列 + 台词列 | **⚠️ 强制合并（两列对照，不可跳过）：** ①并排列出动作调度列原文和台词列原文。②确定每句台词在动作序列中的插入位置。③合并输出——动作描述中自然织入台词，用「」包裹。禁止跳过台词列，禁止只写动作不提台词。剔除摄影机描述。<br>**方向词铁律：** 左右禁（镜头视角），前后允（角色基准）。<br>**画面外禁令：** 禁引本镜不见的元素。 |
 | 拍摄方式 | 运镜列 + 摄影机列 + 机位列 | 编码转自然语言。🟢三侧位从动作调度反推。🔵环=空间环境交代，景别以摄影机列为准。 |
 | 画面呈现 | 动作表演 + 拍摄方式 + 空间关系 | **两步法：** ①推演草稿 ②空间关系收敛。<br>**构图：** 前景/中景/远景 + 左/中/右 + 近/远。<br>**方向词：** 画面呈现有相机视角→左右允许。<br>**起幅/落幅（运镜镜头）：** 景别变化的运镜镜头，画面呈现拆为三段——「起幅——」描述起幅构图、「运镜动作+焦点转移」在中间独立一行、「落幅——」描述落幅后构图。景别不变的跟拍/手持无需拆分。 |
 
@@ -813,72 +784,11 @@ Agent：只改第 7 镜景别列→「已改。镜 6→7→8 景别过渡：中�
 
 ## 关键经验
 
-生产笔记已独立为 `references/production-notes.md`。每完成一场戏的分镜或一次有意义的迭代后，将经验追加到该文件。
+生产笔记独立为 `references/production-notes.md`，前端实现细节独立为 `references/frontend-notes.md`。
 
-**HTML 结构重构后 CSS 选择器检查：** 修改 HTML 中的 section id（如 `v2-storyboard` → `v2-s010`）时，必须同步更新所有引用该 id 的 CSS 选择器。漏掉会导致规则静默失效——最典型的症状是表格 tbody 回退到 body 的 15px，超过 thead 的 12px（字体大小倒挂）。重构后 grep 旧 id 全文件确认无残留。
+- **⚠️ Agent 空间理解局限（自省）：** Agent 不构建三维空间模型——各字段当独立字符串处理，不是在看一个立体场景。涉及空间锚、运镜、相机调度、人物走位时，Agent 的修改极易与导演脑中的实际空间布局冲突。**铁律：修改空间锚或提示词中任何空间描述之前，必须先交叉对照动作调度列和运镜列，确认空间逻辑闭环。** 发现矛盾时，向导演描述矛盾点并等待确认，禁止自主推定。
 
-**刷新保持 Tab 状态（localStorage）：** 纯 CSS radio 切换在页面刷新后必然回到默认。`references/tab-persistence.js` 用 localStorage 记住用户最后选的场次和子模块。复制到 `</body>` 前即可。首次打开回退到默认（价值弧线），关闭 JS 时退化回默认行为。
-
-**Radio 按钮隐藏：** 新增 radio group 时必须显式隐藏。旧 `input[name=tab]{display:none}` 不覆盖 `name=scene` 和 `name=sub-*`。统一规则：`input[name=scene],input[name^=sub-]{display:none}`。否则浏览器显示一排小圆点裸露在 Tab 上方。
-
-**选中 vs 未选对比度：** 场次 Tab 选中态和未选中态必须文字颜色不同。都设 `color:var(--text)` 时只有 2px 底线的区别——用户看不清当前在哪个场次。未选中用 `color:#888`，选中用 `color:var(--head)`。
-
-**共享信息栏：** 每场戏的子 Tab 下方放 `.info-bar`（不随子 Tab 切换隐藏），一行承载统计（场次/镜数/节拍/时长）+ 场景元信息（价值/视点/策略）+ 机位图例。避免在每个子模块里重复粘贴 meta-bar。
-
-**上下文消耗与读取策略：** 单场 HTML ~50KB，8 场全量 ~400KB。分两个阶段——**开发期**（重构框架、新增场次结构、修改全局 CSS）：允许全量读取，上下文代价不可避免。**调试期**（填内容、改单镜景别、修样式）：用 `read_file(offset, limit)` 只看要改的行 + `execute_code` 做 Python 切片替换（`content[:start] + new + content[end:]`），不让全量进上下文。全量进出几次就能吃掉十几%上下文。
-
-**`.c-prompt` 单元格文字排版：** 提示词使用 `<br>` 换行时，CSS 必须用 `white-space:pre-line`，禁止 `word-break:break-word`。后者会在列宽下将每个汉字当成独立断点，导致一字一行竖排。`.c-prompt{word-break:normal;white-space:pre-line;font-size:12px;line-height:1.5}`。验证方法：`browser_console` 检查 `getComputedStyle(td).wordBreak` 和 `offsetWidth`。
-
-**列隐藏/显示切换（已简化）：** c9（音频）、c10（导演备注）始终可见。c11（提示词）始终零宽隐藏作为面板数据源：`th:nth-child(11),td:nth-child(11){width:0!important;padding:0!important;overflow:hidden!important;border:none!important;font-size:0!important}` + `col.c11{width:0}`。不再有 toggle 切换逻辑。
-
-**提示词列已废弃开关按钮，c11 始终零宽隐藏作为面板数据源。**
-
-**数据与呈现分离（飞书架构）：** `templates/feishu-backed.html` + `scripts/build_html.py`（静态再生）+ `scripts/shotlist_server.py`（动态代理）。飞书多维表格做数据库，HTML 前端带「🔄 从飞书刷新」按钮，通过本地代理绕过 CORS 直接从浏览器拉数据。凭证存 localStorage（⚙ 首次配置）。详见 `references/feishu-backend.md`。
-- **v2 飞书表字段 Schema：** 20 列（v2 11 列 + beat 分组 4 列 + 节拍属性 + 视点角色 + 场次）。景别为 Text（含 ★ + ↓ + 焦段·景深），HTML 格式化后搬运。数据库只存纯数据，装饰文本由组装脚本渲染时加。详见 `references/feishu-backend.md`。
-
-- **提示词面板（浮动窗口）：** 点击任意镜头行 → 弹出浮动面板（默认 500×60vh，位于视口右上）。面板可在网页范围内自由拖动（按住标题栏移动）、四边四角 8 个拉伸手柄调整大小（320×200–90vw×90vh），位置和尺寸跨开关持久化（`_saveState`/`_restoreState`，浏览器级不重置）。面板头部按钮行：⏭ 贴靠右侧（撑满屏高）、⏬ 贴靠下侧（撑满屏宽）、📌 钉住切镜不关（钉住时点遮罩不关、点其他镜头切换内容）、📋 复制（fallback textarea 兼容 HTTP）、✕ 关闭（先解钉再关）。提示词正文内子标题（场景/空间锚/镜头N/@图片N/人物/视角等——**不包含演/拍/呈**）自动识别为 ● 彩色圆点前缀徽标（`parsePromptBlocks()` 的 C 风格）。继承用 `↑s010-NN` 标记——面板跟随 ↑ 链向上查找源镜头，显示「↑ 继承自 镜XX」并在面板标题行列出所有覆盖镜头（`镜 02, 03`），点击时所有共享提示词的行同步高亮。`attachPromptClicks` 须在表重建后重新调用。提示词列（c11）始终零宽隐藏，仅做面板数据源。详见 `references/prompt-panel.md` 和 `references/feishu-backend.md`。
-
-- **JS 嵌入 HTML 的括号纪律：** 每次 HTML JS 编辑后用 `python3 -c "print(html.count('{'), html.count('}'))"` 验证括号平衡。间隙 ≠ 0 → 整页 JS 静默失效（行失去点击、面板不弹、cursor:pointer 消失）。经典场景：`if (copyBtn) { copyBtn.onclick = function(){ ... };` 漏了 `if` 的闭合 `}`。症状极隐蔽——页面正常渲染，F12 不报错，但无任何交互。
-
-- **变量使用前定义（coveredLabel 教训）：** JS 中以 `var coveredLabel = ...` 定义的变量在 `hoisting` 下值为 `undefined`（非 ReferenceError），但用于 `textContent` setter 时静默中断——面板不弹且不报错。计算逻辑必须放在使用语句之前。
-
-- **删除 HTML 元素后清理 JS 引用：** 从 HTML 模板删除带 id 的元素（如 `<h3 id="prompt-shot-title">`）时，必须同步 grep JS 中所有 `getElementById` 引用并删除。null.setter → TypeError → 面板不弹。
-
-- **patch 在 HTML JS 上静默失败：** `patch(mode='replace')` 编辑 HTML 模板中的 JavaScript 经常失败——旧字符串匹配不到（缩进/换行差异）或成功但残留碎片。**当 patch 连续失败 2 次时，改用 `execute_code` + `t.replace(old, new)` 做 Python 级别替换。**
-
-- **patch 在 HTML JS 上静默失败：** `patch(mode='replace')` 编辑 HTML 模板中的 JavaScript 时经常失败——要么旧字符串匹配不到（缩进/换行差异），要么成功但残留碎片（如重复的 `} else { fallbackCopy(text); }` 块、缺闭合 `}` 的 `if (copyBtn)`）。**当 patch 连续失败 2 次时，改用 `execute_code` + `t.replace(old, new)` 做 Python 级别的字符串替换。** HTML 模板的 JS 代码块跨越数十行、含转义字符、缩进不规则——这些都是 `patch` 的匹配短板。每次 JS 编辑后必须验证：`python3 -c "print(html.count('{'), html.count('}'))"`。间隙 0 才放行。
-
-- **提示词面板按钮统一风格：** 全部使用 `panel-btn` class。CSS：`font-size:11px;padding:4px 8px;border:1px solid var(--accent);border-radius:4px;background:var(--accent);color:#fff`。文字用中文全词（钉住/右贴附/下贴附/复制），禁用 emoji 简写。✕ 关闭按钮用 `.btn-close` 加粗大号。**hover：红底 → 空心红框 + 红字**（`background:transparent;color:var(--accent);border-color:var(--accent);transform:translateY(-1px)`）。钉住激活态：`opacity:.7`。**⚠️ 按钮 JS 创建时必须只设 `className`，禁止残留 inline `fontSize`/`padding`——行内样式优于 CSS 类，导致不可控的尺寸不一致。**
-
-- **SKILL.md 编辑铁律：** SKILL.md 的所有编辑必须通过 `skill_manage(action='patch')`，禁止使用裸 `patch()` 或 `execute_code` 直接操作文件。`patch()` 曾导致 SKILL.md 被清空为 0 字节，`skill_manage` 是为 skill 文件专门设计的编辑器，有防清空保护。<br>- **feishu-backed.html 编辑铁律：** HTML 模板文件使用 `execute_code` + Python `t.replace(old, new)` 编辑。此文件包含跨行 JS 含转义字符——`patch()` 匹配常常静默失败或产生碎代码，`execute_code` 是唯一可靠方式。每次编辑后验证 `{` 和 `}` 数量相等。
-
-- **提示词面板徽标配色纪律：** 场景描述字段（场景/空间锚/人物/镜头）与制作字段（动作表演/拍摄方式/画面呈现）必须使用不同色系，禁止颜色复用。当前方案：场景=琥珀#f59e0b、空间锚=蓝#3b82f6、人物=翠绿#10b981、镜头=紫#a78bfa；动作表演/拍摄方式/画面呈现统一石板灰#94a3b8（D 风格，无圆点前缀，仅彩色加粗）。**原则：元数据暖色，制作指令中性色。** 用户明确表示颜色混乱是严重的视觉噪音。
-
-- **列宽拖拽：** 表头右边缘竖线可拖拽调列宽。`table-layout:fixed` + `width:100%` + `min-width:900px`（恢复 100% 防止横向溢出，仅 col 总宽 > 容器时启用 `.table-wrap{overflow-x:auto}` 横向滚动）。拖拽开始时锁所有 beat-section 的全部 colgroup 为当前像素宽，拖拽中只改目标列并同步到所有 beat 表的同列。表头分隔线：`border-right:1px solid rgba(255,255,255,.12)`。
-
-- **空间关系列软换行+硬换行：** 飞书 REST API 返回的文本字段包含真实 `\n`（非数组，实测 `curl` 返回 `{"fields":{"空间关系":"[前左] 取币机\\n⤳ 横移 →\\n[右⅓] 👤男人"}}`）。HTML 中 `\n` 不渲染 → 必须 `replace("\n", "<br>")`（Python）+ `replace(/\n/g, '<br>')`（JS）。同时在 `[` 前插 `<wbr>` 软换行：`kongjian.replace("[", "<wbr>[")`。两者缺一不可——`\n`→`<br>` 保证原始分段、`<wbr>` 保证段内折行，这是飞书→HTML 渲染的基本转换。**此规则适用于任何从飞书 API 拿到后渲染到 HTML 的文本字段。**
-
-- **⚠️ 人物设定归属：** 人物长相/年龄/服装是提示词正文的内容（位于「人物：」段），不属于分镜表的任何一列。分镜表是镜头调度工具，不承载角色设定。不要在飞书表或 v2 分镜表中添加独立的人物字段。提示词中的人物描述开头用「@图片N —」标记引用，# 同步到 `人物：@图片N — {描述}` 格式（@标记位于人物行内，不独立成行）。
-
-- **⚠️ Agent 空间理解局限（自省）：** Agent 不构建三维空间模型——各字段当独立字符串处理，不是在看一个立体场景。涉及空间锚、运镜、相机调度、人物走位时，Agent 的修改极易与导演脑中的实际空间布局冲突。**铁律：修改空间锚或提示词中任何空间描述之前，必须先交叉对照动作调度列和运镜列，确认空间逻辑闭环。** 发现矛盾时，向导演描述矛盾点并等待确认，禁止自主推定。用户明确表达了对此类错误的零容忍态度。
-
-- **⚠️ table width:100% 不能移除：** `#v2-s010 table{width:100%}` 是防止横向溢出的关键约束。移除后 cols 按像素总和自己撑开表格，超出视口强制出现横向滚动。正确的列宽可调方案：保留 `width:100%` + `min-width:900px`，`.table-wrap{overflow-x:auto}` 仅在 col 总宽 > 容器时启用滚动条。拖拽调列宽时锁所有 colgroup 为像素宽并同步到所有 beat 表即可，不改变 table 的 100% 约束。
-
-
-
-- **提示词面板关闭态收回：** `closePrompt()` 处理：若 `.pinned` 则 `return`（钉住时不关）；否则 `_saveState()` → 移除 `.open` + `.pinned` → 隐藏 overlay → 清 `.clicked`。不重置尺寸或位置。✕ 按钮的 `onclick` 必须先解钉再调 closePrompt：`panel.classList.remove('pinned')` → `btnPin.classList.remove('pinned')` → `closePrompt()`。钉住时点击 overlay 不关面板（`closePrompt` 第一行即 return），点击其他镜头切换内容但保持钉住状态（`openPrompt` 中若 `.pinned` 则不显示 overlay）。
-
-- **列宽拖拽：** 表头 `<th>` 右边缘 5px 可拖拽区域，`cursor:col-resize`，调整对应 `<col>` 宽度（最小 30px）。每张 beat-section table 独立绑定。表头右分隔线 `border-right:1px solid rgba(255,255,255,.12)`。JS 初始化在 `DOMContentLoaded` 中，`attachPromptClicks` 之前。与行点击不冲突（触发区域不同：th 右边缘 vs td 单元格）。详见 `references/prompt-panel.md`。
-
-- **动态刷新 JS 须同步 Python 逻辑：** `refreshFromFeishu` 中的 HTML 重建必须包含 beat 分组渲染（读 beat序号/类型/标题/动作 → 分组 → 生成 beat-section），不能只拼平板 `<tr>` 列表。否则刷新后分组丢失，高亮绑定也失效。
-
-- **hover/click 纪律：** 点击态用 `.clicked` class（背景 `rgba(244,63,94,.12)`），样式与 hover 一致，禁用 box-shadow/transition。关闭面板或点新行前清 `.clicked`。共享提示词的镜头通过 `↑s010-NN` 继承链识别，点击任一镜均同步高亮同组所有镜头。
-
-**编辑范围纪律：** 用户说"只改这两点"时必须严格守界——不改未授权的列、不顺手优化相邻元素、不动全局 CSS 规则。过度修改曾导致 HTML 大面积崩溃，用户明确表示"心有余悸"。修改前确认边界，修改后不越界。
-- 模块4：提示词生成独立模块，**动作表演/拍摄方式/画面呈现**三行模板（原演/拍/呈，升级为视频模型可读的全称）。模板结构与生成规则见「模块4：提示词生成」章节。
-- 两层 Tab 片级容器：上层场次 (name=scene) + 下层模块 (name=sub-sXXX)，纯 CSS radio 切换
-- 价值弧线是场次层第一个 Tab，不另起 HTML
-- v2 扩展至 11 列（c11 提示词，beat 级 rowspan 合并）
+- **⚠️ 人物设定归属：** 人物长相/年龄/服装是提示词正文的内容（位于「人物：」段），不属于分镜表的任何一列。分镜表是镜头调度工具，不承载角色设定。不要在飞书表或 v2 分镜表中添加独立的人物字段。提示词中的人物描述开头用「@图片N —」标记引用，格式为 `人物：@图片N — {描述}`（@标记位于人物行内，不独立成行）。
 - v2 扩展至 11 列（c11 提示词）。c11 始终零宽隐藏作为面板数据源，无 toggle 开关
 - 列隐藏方案：`col` 元素 `display:none`/`visibility:collapse` 均不可靠，最终使用零宽折叠（`width:0;padding:0;overflow:hidden`），同时配合 `col` 宽度归零释放 table-layout:fixed 空间
 - `.c-prompt` 文字排版：必须 `white-space:pre-line`，禁用 `word-break:break-word`（导致一字一行）
@@ -886,78 +796,14 @@ Agent：只改第 7 镜景别列→「已改。镜 6→7→8 景别过渡：中�
 - **Feishu 前后端分离架构：** `templates/feishu-backed.html` + `scripts/build_html.py`（静态再生）+ `scripts/shotlist_server.py`（多线程代理,8089）。飞书多维表格做数据库，HTML 带「🔄 从飞书刷新」+ 提示词面板（点击弹出/↑继承/复制/全组高亮）。c11 零宽隐藏仅做面板数据源。beat 分组在 JS 刷新中同步渲染。详见 `references/feishu-backend.md`。
 - **hover/click 纪律：** 只用背景色（`rgba(244,63,94,.12)`），禁用 box-shadow/transition。点击态 `.clicked` 样式与 hover 完全一致。
 
+- **右键菜单（ctx-menu）：** `templates/feishu-backed.html` 实现了右键编辑动作调度。菜单通过 `contextmenu` 事件弹出（`e.preventDefault()` 阻止浏览器默认菜单），`position:fixed` 跟随鼠标。点击空白处自动消失。编辑时在 td 内插入 textarea + 保存/取消按钮，按钮必须加 `e.stopPropagation()` 防止事件冒泡触发提示词面板。
+
+- **X 关闭按钮：** onclick 必须写 `closePrompt()`（不要复杂的 inline 逻辑）。`closePrompt()` 内先 unpin 再关闭，确保 X 按钮在任何状态下都能关闭面板。模板编辑时必须验证 onclick 无转义引号残留（`\\'` 会导致 JS 静默失效）。
+
+- **内联编辑器事件隔离：** textarea 和按钮所在的 td 会触发行点击（弹提示词面板）。`td:has(textarea)` 选择器不可靠——取消按钮先删 textarea 再冒泡，选择器已不匹配。正确做法：直接在按钮 onclick 中 `e.stopPropagation()`。
+
 ---
 
 ## 模块集成：单页多模块 HTML
 
-### 概念
-
-将所有场次的工作产物编织进**一个**片级 `.html` 文件。两层 Tab 结构：
-
-- **上层（场次 Tab，name="scene"）：** 价值弧线 | s010 | s020 | ... | s080。默认选中价值弧线。
-- **下层（模块子 Tab，name="sub-s010" 等）：** 每场戏内部用独立 radio group 切换节拍分析 / v1 骨架 / v2 分镜 / 提示词。
-
-价值弧线 Tab 无子模块——直接显示全片弧线表。其余场次 Tab 含 4 个子模块。
-
-> ⚠️ **归属坑：** 不要把价值弧线拆成独立 HTML（用户：不要另起 html 网页）。它是片级容器的第一个场次 Tab，不是独立文件。也不要把全片弧线塞进某个场次的子模块——那是把片级内容嵌套在场级下面。
-
-> ⚠️ **CSS 选择器断裂：** 重构 HTML 修改 section id 后，必须 grep 全文件确认旧 id 无 CSS 残留。症状：表格字体倒挂（tbody 15px > thead 12px）。
-
-> 💡 **刷新记忆：** `references/tab-persistence.js` 提供 localStorage 方案，让页面刷新后记住用户最后选的场次 Tab 和子 Tab。纯 CSS 做不到。复制到 HTML `</body>` 前即可。
-
-### Tab 切换（纯 CSS，零 JS，两层 radio）
-
-场次层用 `name="scene"` 的 radio group：
-
-```html
-<input type="radio" name="scene" id="scene-arc" checked>
-<input type="radio" name="scene" id="scene-s010">
-...
-<nav class="scene-tabs">
-  <label for="scene-arc">价值弧线</label>
-  <label for="scene-s010">s010 第一场</label>
-  ...
-</nav>
-<section id="arc-section" class="scene-section">...</section>
-<section id="s010-section" class="scene-section">...</section>
-```
-
-子模块层用独立的 radio group（如 `name="sub-s010"`）：
-
-```html
-<section id="s010-section" class="scene-section">
-  <input type="radio" name="sub-s010" id="sub-beat-s010" checked>
-  <input type="radio" name="sub-s010" id="sub-v1-s010">
-  ...
-  <nav class="sub-tabs">
-    <label for="sub-beat-s010">节拍分析</label>
-    <label for="sub-v1-s010">v1 骨架</label>
-    ...
-  </nav>
-  <div id="beat-s010" class="sub-content">...</div>
-  <div id="v1-s010" class="sub-content">...</div>
-  ...
-</section>
-```
-
-```css
-/* 场次层 */
-.scene-section{display:none}
-#scene-arc:checked~#arc-section{display:block}
-#scene-s010:checked~#s010-section{display:block}
-/* 场次 Tab 高亮 */
-#scene-arc:checked~.scene-tabs label[for=scene-arc]{border-bottom-color:var(--accent)}
-
-/* 子模块层 —— 每个场次独立 group */
-.sub-content{display:none}
-#sub-beat-s010:checked~#beat-s010{display:block}
-#sub-v1-s010:checked~#v1-s010{display:block}
-/* 子模块 Tab 高亮 */
-#sub-beat-s010:checked~.sub-tabs label[for=sub-beat-s010]{border-bottom-color:var(--accent)}
-```
-
-> **关键：** 子模块 radio 和其对应的 content div 必须是兄弟节点（都在 `<section>` 内部），才能用 `~` 选择器。场次 section 的 `display:none` 会覆盖子模块的 `display:block`——只有当前场次被选中时，子模块的显示规则才生效。
-
-### 文件大小
-
-8 场全量 ≈ 200–500KB，远低于浏览器 1MB 流畅线。
+> 两层 Tab 纯 CSS 实现、Tab 持久化、文件大小等细节见 `references/css-pitfalls.md`。

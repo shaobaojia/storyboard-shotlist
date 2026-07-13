@@ -129,3 +129,7 @@ document.querySelector('.c-prompt').offsetWidth
 // 文字排版
 getComputedStyle(document.querySelector('.c-prompt')).wordBreak
 ```
+
+## 两层 Tab 单页容器
+
+纯 CSS radio 切换（零 JS）。场次层 `name="scene"` group，子模块层独立 `name="sub-sXXX"` group。子模块 radio 和 content div 必须兄弟节点（`~` 选择器）。归属坑：价值弧线是场次层第一个 Tab，不要拆成独立 HTML。CSS 选择器断裂：重构后 grep 全文件确认旧 id 无残留（症状：tbody 字体 > thead）。`references/tab-persistence.js` 提供 localStorage 页面刷新记忆。8 场全量 ≈ 200–500KB。

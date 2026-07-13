@@ -150,3 +150,96 @@ curl -X POST "https://open.feishu.cn/open-apis/bitable/v1/apps/{token}/tables/{i
 ### User Preference
 
 Browser-based refresh over CLI commands. Tools must work without Hermes running. file:// may have CORS issues; serve via python3 -m http.server or Hermes dashboard 9119.
+
+## 2026-07-12: 飞书 API 批量修改陷阱
+
+### 多次 GET→PUT 互相覆盖
+
+**症状：** 连续修改同一记录的不同字段时，先改的内容被后改的操作覆盖丢失。例如：改了台词 → 改了前缀格式 → 台词丢了。
+
+**根因：** 每次 GET→修改→PUT 是一个独立事务。两次 PUT 间隔太短时，第二次 GET 可能拿到第一次 PUT 前的旧版本，第二次 PUT 把第一次的改动盖回去了。
+
+**正确做法：** 一次 GET → 攒齐所有修改 → 一次 PUT。绝不做「改一处 PUT 一次，再改再 PUT」的连环操作。
+
+### 静默失败陷阱
+
+`replace()` 匹配失败时静默返回原文，PUT 仍返回 `code=0`。Agent 误以为改成功了，实际数据没变。
+
+**防范：** 每次 PUT 后立即 GET 验证，确认改动已落地再进入下一步。
+
+## 2026-07-12: 右键菜单编辑 + 模板编辑终局
+
+### 右键菜单（contextmenu）
+- `contextmenu` 事件不触发 `click`，与提示词面板零冲突。
+- 固定定位 `<div>` 在鼠标位置弹出，点空白处自动消失。
+- 编辑时用 `textarea` 替换 `td` 内容，保存走代理 PUT（同提示词面板的 `_method:'PUT'` 模式）。
+- `data-record-id` 必须在行上，否则编辑时拿不到 record_id。
+
+### HTML 模板文件编辑终局
+- **`skill_manage(action='patch')`** → SKILL.md 专属，有防清空保护，禁止用裸 `patch()` 或 `execute_code` 操作 SKILL.md。
+- **`execute_code` + `write_file`** → 对 `feishu-backed.html` 不可靠，多次静默失败（文件内容不落地）。
+- **终端 `python3 -c` 一行命令** → `feishu-backed.html` 唯一可靠编辑方式。用 Python 读文件、`str.replace()`、写回。
+- 模板中 JS 字符串含 `'` 时，文件内以 `\'` 字面量保存。Python 匹配需用单引号包裹的字符串里写双引号避开转义地狱，或者直接匹配不含引号的子串。
+
+### textContent vs innerText 陷阱
+
+**症状：** 编辑保存后，提示词格式全部丢失——冒号消失、换行消失、所有内容连成一段。
+
+**根因：** `.prompt-text` 内容由 `parsePromptBlocks()` 渲染为 HTML（含 badge span 等元素）。`textContent` 在包含子元素的节点上会丢弃换行并可能打乱冒号位置。
+
+**修复：** 
+1. `savePrompt()` 用 `innerText`（保留 `<br>` 换行）替代 `textContent`
+2. `toggleEdit()` 进入编辑态时先将 HTML 替换为 `currentShotData.promptText` 纯文本，避免用户编辑 badge 标签内的文字
+
+### X 按钮 onclick 转义地狱
+
+**症状：** ✕ 按钮点击无效，面板不关。
+
+**根因：** 模板中 onclick 使用了 `\'` 转义单引号，HTML 解析后 `\'` 变成字面量反斜杠+引号，JS 内虽能正确解析为 `'`，但极长的 inline onclick 极易因各种格式问题静默失效。
+
+**修复：** 把 X 按钮 onclick 简化为 `onclick="closePrompt()"`，将 unpin 逻辑移入 `closePrompt` 内部。一行调用，零转义。
+
+### 编辑态点击拦：td:has(textarea)
+
+**症状：** 右键编辑动作调度时，点击 textarea 或保存/取消按钮会触发行 click → 弹出提示词面板。
+
+**误解：** 最初以为需要拦所有 `.panel-btn`，结果把 X 按钮也拦了。
+
+**正确做法：** 只拦 `textarea`、`.ctx-menu`、`td:has(textarea)`——后者覆盖了编辑格内所有子元素（textarea + 按钮），但不影响面板上的 X 按钮。
+
+### 保存按钮文字跳变
+
+**症状：** 保存成功时按钮从「💾 保存」变成「✓ 已保存」，宽度微增导致整排按钮布局跳动。
+
+**修复：** `.panel-btn` 加 `white-space:nowrap;flex-shrink:0`，禁止换行和压缩。
+
+### 模板编辑终局（补充）
+
+- `execute_code` + `read_file(limit=900)` 后 `write_file` 写回时，超过 limit 的内容会被截断。读取和写入内容不一致导致静默失败。
+- **唯一可靠方式：终端 `python3 -c` 一行**，用 Python 原生 `open/read/replace/write`，不设 limit，不绕中间文件。
+
+**症状：** 编辑中点空白区域关面板，再打开时「编辑」按钮消失、「💾 保存」还露着，但正文不可编辑。
+
+**根因：** `closePrompt` 不清 `_isEditing` 和按钮状态。`openPrompt` 重渲染 body.innerHTML 但不重渲染 header 按钮。
+
+**修复：** `openPrompt` 开头重置 `_isEditing = false`，编辑按钮 display=`""`，保存按钮 display=`"none"`。
+
+### 代理 PUT 支持
+
+**症状：** 保存提示词时请求挂起。代理 `shotlist_server.py` 的 `_proxy_request` 处理 POST 请求时，`method` 固定为 `"POST"`，而飞书更新记录需要 PUT。
+
+**修复：** 代理检查请求 body 中的 `_method` 参数覆盖默认 method。前端保存时传 `_method:'PUT'`。
+
+### data-record-id 缺失
+
+**症状：** 保存时弹「缺少记录ID」。
+
+**根因：** `buildRow` 生成的行没有 `data-record-id` 属性。需在 `refreshFromFeishu` 的 shot 对象中加 `rid: r.record_id`，并在 `buildRow` 返回的 `<tr>` 中插入 `data-record-id`。`build_html.py` 的静态行也需同步。
+
+### has-prompt 绿点双路径同步
+
+**症状：** 浏览器刷新（F5）后绿点消失，点 🔄 又出现。
+
+**根因：** `has-prompt` 类只在 JS `refreshFromFeishu` 的 `buildRow` 中添加，静态 HTML（`build_html.py`）未同步。
+
+**修复：** `build_html.py` 的 `build_shot_row` 中检查 `提示词` 字段，有内容时加 `class="has-prompt"`。

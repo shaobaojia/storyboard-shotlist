@@ -47,7 +47,7 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
             feishu_url,
             data=data_bytes,
             headers={**feishu_headers, "Content-Type": "application/json; charset=utf-8"} if data_bytes else feishu_headers,
-            method=method if data_bytes else "GET"
+            method=params.get("_method", method) if data_bytes else "GET"
         )
         try:
             with urllib.request.urlopen(req, timeout=30) as resp:

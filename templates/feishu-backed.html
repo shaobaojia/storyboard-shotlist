@@ -62,6 +62,7 @@ tbody tr:hover{background:rgba(244,63,94,.12)}
 .prompt-row.clicked td{background:rgba(244,63,94,.12)!important}
 tbody td:nth-child(1){white-space:nowrap}tbody td:nth-child(2){white-space:nowrap}tbody td:nth-child(4){white-space:nowrap;min-width:90px}tbody td:nth-child(5){white-space:nowrap}tbody td:nth-child(8){white-space:nowrap}
 .c-num{color:var(--accent);font-weight:700;text-align:center}
+tr.has-prompt .c-num::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:#22c55e;margin-right:4px;vertical-align:middle}
 .c-dur{text-align:center;white-space:nowrap;color:var(--green)}
 .c-dialogue{color:#fbbf24}
 .lens-tech{font-size:11px;color:var(--text);opacity:.35}
@@ -102,7 +103,8 @@ tbody td:nth-child(1){white-space:nowrap}tbody td:nth-child(2){white-space:nowra
 
 .prompt-covered{font-size:12px;color:var(--green);margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border)}
 .prompt-inherit{font-size:11px;color:var(--accent);margin-bottom:12px}
-.prompt-text{font-size:14px;line-height:2;color:#d4d4d4;white-space:pre-wrap;background:rgba(0,0,0,.15);border-radius:6px;padding:16px 18px;box-shadow:inset 0 1px 3px rgba(0,0,0,.3),0 1px 0 rgba(255,255,255,.03)}
+.prompt-text{font-size:14px;line-height:2;color:#d4d4d4;white-space:pre-wrap;background:rgba(0,0,0,.15);border-radius:6px;padding:16px 18px;box-shadow:inset 0 1px 3px rgba(0,0,0,.3),0 1px 0 rgba(255,255,255,.03);outline:none;border:1px solid transparent;transition:border-color .2s}
+.prompt-text.editing{border-color:rgba(245,158,11,.5)!important;background:rgba(245,158,11,.04)!important}
 .prompt-line{margin-bottom:4px;line-height:1.9;font-size:14px}
 .prompt-note{font-size:inherit;color:var(--accent);margin-left:4px}
 .prompt-spacer{height:8px}
@@ -126,9 +128,12 @@ tbody td:nth-child(1){white-space:nowrap}tbody td:nth-child(2){white-space:nowra
 /* 钉住按钮 */
 .btn-pin{background:none;border:none;color:var(--text);font-size:16px;cursor:pointer;padding:4px 6px;opacity:.5;transition:all .2s}
 /* Header buttons — unified */
-.panel-btn{font-size:11px;padding:4px 8px;border:1px solid var(--accent);border-radius:4px;background:var(--accent);color:#fff;cursor:pointer;transition:all .15s ease;line-height:1.4}
+.panel-btn{font-size:11px;padding:4px 8px;border:1px solid var(--accent);border-radius:4px;background:var(--accent);color:#fff;cursor:pointer;transition:all .15s ease;line-height:1.4;white-space:nowrap;flex-shrink:0}
 .panel-btn:hover{transform:translateY(-1px);background:transparent;color:var(--accent);border-color:var(--accent)}
 .panel-btn.pinned{opacity:.7}
+.ctx-menu{position:fixed;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:4px 0;min-width:160px;z-index:1000;box-shadow:0 4px 12px rgba(0,0,0,.5)}
+.ctx-item{padding:8px 14px;font-size:13px;color:var(--text);cursor:pointer;white-space:nowrap}
+.ctx-item:hover{background:rgba(244,63,94,.12);color:var(--head)}
 .btn-close{border-color:var(--accent);background:var(--accent);font-size:16px;padding:2px 6px;color:#fff}
 .btn-close:hover{background:transparent;color:var(--accent);border-color:var(--accent);transform:scale(1.1)}
 
@@ -249,14 +254,21 @@ th{position:relative}
 <div class="prompt-header">
 <div><h3 style="margin:0;color:var(--head);font-size:16px;display:inline">提示词</h3><span class="shot-meta" id="prompt-shot-num" style="margin-left:8px"></span></div>
 <div style="display:flex;gap:6px;align-items:center">
+<button class="panel-btn" id="prompt-edit" onclick="toggleEdit()">编辑</button>
+<button class="panel-btn" id="prompt-save" onclick="savePrompt()" style="display:none">💾 保存</button>
 <button class="panel-btn" id="prompt-copy">复制</button>
-<button class="panel-btn btn-close" onclick="var p=document.getElementById(\'prompt-panel\');p.classList.remove(\'pinned\');var b=p.querySelector(\'.btn-pin\');if(b)b.classList.remove(\'pinned\');closePrompt()">✕</button>
+<button class="panel-btn btn-close" onclick="closePrompt()">✕</button>
 </div>
 </div>
 <div class="prompt-body" id="prompt-body">
 <div class="prompt-empty">点击镜头行查看提示词</div>
 </div>
 </div>
+</div>
+
+<!-- Context Menu -->
+<div class="ctx-menu" id="ctx-menu" style="display:none">
+<div class="ctx-item" onclick="editCell()">编辑动作调度</div>
 </div>
 
 <!-- Settings Panel -->
@@ -410,6 +422,7 @@ async function refreshFromFeishu(){
         yinpin: norm(f['音频']),
         beizhu: norm(f['导演备注']),
         tishici: norm(f['提示词']),
+        rid: r.record_id,
         beatNum: norm(f['beat序号']),
         beatType: norm(f['beat类型']),
         beatTitle: norm(f['beat标题']),
@@ -431,7 +444,8 @@ async function refreshFromFeishu(){
       else audioHtml = '<span class="audio-music">—</span>';
       var dur = s.shichang ? Math.round(s.shichang) + 's' : '';
       var taiciHtml = s.taici ? '<td class="c-dialogue">' + s.taici + '</td>' : '<td></td>';
-      return '<tr><td class="c-num">' + s.jinghao + '</td><td>' + s.yunjing + '</td><td>' + formatKongjian(s.kongjian) + '</td><td>' + sheyingji + '</td><td>' + (JIWEI_SHORT[s.jiwei]||s.jiwei) + '</td><td>' + s.dongzuo + '</td>' + taiciHtml + '<td class="c-dur">' + dur + '</td><td>' + audioHtml + '</td><td class="c-notes">' + s.beizhu + '</td><td class="c-prompt">' + s.tishici + '</td></tr>';
+      var hasPrompt = s.tishici && String(s.tishici).trim();
+      return '<tr' + (hasPrompt ? ' class="has-prompt"' : '') + ' data-record-id="' + (s.rid||'') + '"><td class="c-num">' + s.jinghao + '</td><td>' + s.yunjing + '</td><td>' + formatKongjian(s.kongjian) + '</td><td>' + sheyingji + '</td><td>' + (JIWEI_SHORT[s.jiwei]||s.jiwei) + '</td><td>' + s.dongzuo + '</td>' + taiciHtml + '<td class="c-dur">' + dur + '</td><td>' + audioHtml + '</td><td class="c-notes">' + s.beizhu + '</td><td class="c-prompt">' + s.tishici + '</td></tr>';
     }
     
     var groups = {}; var order = [];
@@ -493,6 +507,12 @@ async function refreshFromFeishu(){
 var currentShotData = null;
 
 function openPrompt(shotNum, rowElement) {
+  // Reset editing state
+  _isEditing = false;
+  var editBtn = document.getElementById("prompt-edit");
+  var saveBtn = document.getElementById("prompt-save");
+  if (editBtn) { editBtn.style.display = ""; }
+  if (saveBtn) { saveBtn.style.display = "none"; saveBtn.textContent = "保存"; saveBtn.disabled = false; }
   var row = rowElement || document.querySelector('[data-shot="' + shotNum + '"]');
   if (!row) return;
   
@@ -524,7 +544,8 @@ function openPrompt(shotNum, rowElement) {
     }
   }
   
-  currentShotData = {promptText: promptText, sourceShot: sourceShot};
+  currentShotData = {promptText: promptText, sourceShot: sourceShot, recordId: (row.getAttribute('data-record-id')||''),
+    targetRecordId: (sourceShot !== shotNum ? (document.querySelector('[data-shot="' + sourceShot + '"]')||{}).getAttribute('data-record-id')||'' : '')};
   
   // Highlight all shots sharing same prompt + collect covered shots
   document.querySelectorAll('.prompt-row.clicked').forEach(function(r){r.classList.remove('clicked')});
@@ -754,12 +775,149 @@ function bounceCopyBtn(){
 }
 
 
+var _isEditing = false;
+function toggleEdit(){
+  var body = document.getElementById('prompt-body');
+  var txt = body.querySelector('.prompt-text');
+  var editBtn = document.getElementById('prompt-edit');
+  var saveBtn = document.getElementById('prompt-save');
+  if (!txt) return;
+  
+  if (!_isEditing){
+    // Replace HTML-formatted prompt with plain text for editing
+    txt.innerHTML = '';
+    txt.textContent = currentShotData.promptText;
+    txt.contentEditable = 'true';
+    txt.classList.add('editing');
+    txt.focus();
+    editBtn.style.display = 'none';
+    saveBtn.style.display = '';
+    _isEditing = true;
+  }
+}
+function savePrompt(){
+  var txt = document.getElementById('prompt-body').querySelector('.prompt-text');
+  if (!txt) return;
+  var newText = txt.innerText.trim();
+  var editBtn = document.getElementById('prompt-edit');
+  var saveBtn = document.getElementById('prompt-save');
+  
+  // Get the source shot's record_id (inherited shot → save to source)
+  var rid = currentShotData.targetRecordId || currentShotData.recordId;
+  if (!rid) { alert('无法保存：缺少记录ID，请先点🔄从飞书刷新'); return; }
+  
+  saveBtn.textContent = '保存中...'; saveBtn.disabled = true;
+  
+  var cfg = JSON.parse(localStorage.getItem('feishu_cfg')||'{}');
+  if (!cfg.app_id) { alert('请先配置飞书API设置'); return; }
+  
+  fetch('/api/feishu',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({url:'https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal',headers:{'Content-Type':'application/json'},body:{app_id:cfg.app_id,app_secret:cfg.app_secret}})
+  }).then(function(r){return r.json()}).then(function(td){
+    var token = td.tenant_access_token;
+    return fetch('/api/feishu',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({url:'https://open.feishu.cn/open-apis/bitable/v1/apps/'+cfg.app_token+'/tables/'+cfg.table_id+'/records/'+rid,headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:{fields:{'提示词':newText}},_method:'PUT'})
+    });
+  }).then(function(r){return r.json()}).then(function(d){
+    if (d.code===0){
+      txt.contentEditable = 'false';
+      txt.classList.remove('editing');
+      editBtn.style.display = ''; saveBtn.style.display = 'none';
+      saveBtn.textContent = '💾 保存'; saveBtn.disabled = false;
+      _isEditing = false;
+      // Update cached text + DOM data
+      currentShotData.promptText = newText;
+      var srcRow = document.querySelector('[data-shot="' + currentShotData.sourceShot + '"]');
+      if (srcRow){ var tds=srcRow.querySelectorAll('td'); if(tds.length>=11) tds[10].textContent=newText; }
+      // Flash save button
+      saveBtn.style.display = ''; saveBtn.textContent = '✅ 已保存';
+      setTimeout(function(){ saveBtn.style.display = 'none'; saveBtn.textContent = '💾 保存'; }, 2000);
+    } else {
+      alert('保存失败: ' + (d.msg||'未知错误'));
+      saveBtn.textContent = '💾 保存'; saveBtn.disabled = false;
+    }
+  }).catch(function(e){
+    alert('保存失败: ' + e.message);
+    saveBtn.textContent = '💾 保存'; saveBtn.disabled = false;
+  });
+}
+var _ctxRow = null;
+function showCtxMenu(e, row){
+  e.preventDefault();
+  _ctxRow = row;
+  var menu = document.getElementById("ctx-menu");
+  menu.style.display = "block";
+  menu.style.left = e.clientX + "px";
+  menu.style.top = e.clientY + "px";
+}
+function hideCtxMenu(){
+  var menu = document.getElementById("ctx-menu");
+  if (menu) menu.style.display = "none";
+}
+document.addEventListener("click", function(e){
+  if (!e.target.closest(".ctx-menu")) hideCtxMenu();
+});
+
+function editCell(){
+  hideCtxMenu();
+  if (!_ctxRow) return;
+  // If already editing, just focus the textarea
+  var existingTa = _ctxRow.querySelector("td textarea");
+  if (existingTa) { existingTa.focus(); return; }
+  var cells = _ctxRow.querySelectorAll("td");
+  if (cells.length < 11) return;
+  var td = cells[5];
+  var rid = _ctxRow.getAttribute("data-record-id");
+  if (!rid) { alert("请先点从飞书刷新"); return; }
+  
+  var orig = td.textContent.trim();
+  var ta = document.createElement("textarea");
+  ta.value = orig;
+  ta.style.cssText = "width:100%;min-height:80px;background:var(--bg);color:var(--text);border:1px solid var(--accent);border-radius:4px;padding:6px;font:13px/1.5 sans-serif;resize:vertical;box-sizing:border-box";
+  var btnRow = document.createElement("div");
+  btnRow.style.cssText = "display:flex;gap:6px;margin-top:4px";
+  var saveBtn = document.createElement("button");
+  saveBtn.textContent = "保存"; saveBtn.className = "panel-btn";
+  var cancelBtn = document.createElement("button");
+  cancelBtn.textContent = "取消"; cancelBtn.className = "panel-btn";
+  cancelBtn.style.cssText = "background:var(--row-light);color:var(--text);border-color:var(--border)";
+  
+  td.textContent = "";
+  td.appendChild(ta);
+  td.appendChild(btnRow);
+  btnRow.appendChild(saveBtn);
+  btnRow.appendChild(cancelBtn);
+  ta.focus();
+  
+  cancelBtn.onclick = function(e){ e.stopPropagation(); td.textContent = orig; };
+  
+  saveBtn.onclick = function(e){
+    e.stopPropagation();
+    var cfg = JSON.parse(localStorage.getItem("feishu_cfg")||"{}");
+    if (!cfg.app_id) { alert("请先配置飞书API设置"); return; }
+    saveBtn.disabled = true; saveBtn.textContent = "保存中...";
+    fetch("/api/feishu",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:"https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal",headers:{"Content-Type":"application/json"},body:{app_id:cfg.app_id,app_secret:cfg.app_secret}})})
+    .then(function(r){return r.json()}).then(function(td2){
+      var token = td2.tenant_access_token;
+      return fetch("/api/feishu",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:"https://open.feishu.cn/open-apis/bitable/v1/apps/"+cfg.app_token+"/tables/"+cfg.table_id+"/records/"+rid,headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},body:{fields:{"动作调度":ta.value.trim()}},_method:"PUT"})});
+    }).then(function(r){return r.json()}).then(function(d){
+      if (d.code===0) { td.textContent = ta.value.trim(); }
+      else { td.textContent = orig; alert("保存失败: "+(d.msg||"")); }
+    }).catch(function(e){ td.textContent = orig; alert("保存失败: "+e.message); });
+  };
+}
+
+
 function closePrompt() {
   var panel = document.getElementById('prompt-panel');
-  if (panel.classList.contains('pinned')) return; // pinned → don't close
+  // X button always closes — unpin first
+  panel.classList.remove('pinned');
+  var pb = panel.querySelector('.btn-pin');
+  if (pb) pb.classList.remove('pinned');
   panel._saveState();
   panel.classList.remove('open');
-  panel.classList.remove('pinned');
   document.getElementById('prompt-overlay').classList.remove('show');
   document.querySelectorAll('.prompt-row.clicked').forEach(function(r){r.classList.remove('clicked')});
   var pb = panel.querySelector('.panel-btn.pinned');
@@ -773,7 +931,10 @@ function attachPromptClicks() {
     row.classList.add('prompt-row');
     var shotNum = numCell.textContent.trim();
     row.setAttribute('data-shot', shotNum);
+    row.addEventListener('contextmenu', function(e){ showCtxMenu(e, row); });
     row.addEventListener('click', function(e){
+      // Don't open prompt panel if clicking inside a textarea or context menu
+      if (e.target.closest('textarea') || e.target.closest('.ctx-menu') || e.target.closest('td:has(textarea)')) return;
       // Clear previous clicked before setting new one
       document.querySelectorAll('.prompt-row.clicked').forEach(function(r){r.classList.remove('clicked')});
       openPrompt(shotNum, row);

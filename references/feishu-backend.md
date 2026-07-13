@@ -4,14 +4,27 @@
 
 ```
 飞书多维表格（数据库）
-     ↑↓ REST API
-  build_html.py（静态再生：读飞书 → 套模板 → 出 HTML）
-     ↓
-  HTML 前端（EDL 暗调主题）
-     ← shotlist_server.py（动态代理，8089 端口）
-        ↑↓ fetch('/api/feishu')
-        → open.feishu.cn（无 CORS 问题的服务器端调用）
+     ↑↓ REST API (direct curl from Agent)
+     ↑↓ REST API (via proxy for browser)
+  Agent (terminal curl)          shotlist_server.py (8089 端口)
+     ↑ 读 feishu_config.json        ↑ 读 feishu_config.json
+     └── SKILL.md 同级目录           └── (待实现：目前仍透传浏览器凭证)
 ```
+
+**凭证存放：** `feishu_config.json`（与 SKILL.md 同目录）。Agent 和 server 共享这个文件，浏览器不存凭证。格式：
+
+```json
+{
+  "app_id": "cli_...",
+  "app_secret": "...",
+  "app_token": "OwBSbEQS...",
+  "table_id": "tbl..."
+}
+```
+
+**Agent 直接调飞书 API：** Agent 从 `feishu_config.json` 读凭证 → `curl` 拿 token → `curl` 读写记录。不走代理——代理是给浏览器解决 CORS 用的，Agent 在 NAS 上不需要。
+
+**提示词写回：** 使用 Feishu REST API 的 PUT（不是 PATCH）更新记录的 `提示词` 字段。镜号之间的继承用 `↑s010-NN` 标记，面板 JS 自动解析。
 
 ## v2 Field Schema (20 columns)
 
@@ -70,6 +83,8 @@ HTML 渲染时按 `beat序号` 分组：
 
 Feishu OpenAPI does NOT return CORS headers (confirmed via `curl -X OPTIONS`). Any browser JS call to `open.feishu.cn` is blocked. Proxy runs on NAS, same-origin for HTML, forwards server-side.
 
+**Proxy HTTP method override:** The proxy defaults to forwarding requests with the same method. For Feishu record updates (which require PUT), browser JS passes `_method:'PUT'` in the JSON body, and the proxy uses it instead of the incoming POST method. This allows the save function to do `fetch('/api/feishu', {method:'POST', body:JSON.stringify({url:..., _method:'PUT', ...})})`.
+
 ## Server Persistence
 
 Docker `nohup` dies on restart. Permanent: UGREEN NAS → Control Panel → Task Scheduler → Add startup task:
@@ -77,12 +92,20 @@ Docker `nohup` dies on restart. Permanent: UGREEN NAS → Control Panel → Task
 python3 /opt/data/skills/scriptwriting/storyboard-shotlist/scripts/shotlist_server.py
 ```
 
-### Prompt Panel UX (2026-07-11, floating window refactor)
+### Prompt Panel UX (2026-07-11: floating window; 2026-07-13: in-place edit)
 
 **面板架构：浮动窗口（非右滑）。** `position:fixed` + 四条边四角 resize 手柄 + 标题栏 drag。
 
 **面板布局：**
-- 头部（drag handle）：左 `提示词` 静态标题 + 覆盖镜头号（`镜 02, 03`，同标题一行） + 右按钮行 `钉住` `右贴附` `下贴附` `复制` `✕`。按钮统一样式：`panel-btn` class，红底白字，hover 变空心红框红字。全中文全词，无 emoji。
+- 头部（drag handle）：左 `提示词` 静态标题 + 覆盖镜头号（`镜 02, 03`） + 右按钮行 `编辑` `💾保存` `复制` `✕`。按钮统一样式：`panel-btn` class，红底白字，hover 变空心红框红字。全中文全词，无 emoji。
+- `.prompt-text` 正文区：微内阴影 + 暗底。编辑态：边框变琥珀色 `rgba(245,158,11,.5)`，背景微暖 `rgba(245,158,11,.04)`。
+
+**提示词就地编辑（2026-07-13）：**
+- 点击「编辑」→ 正文变 `contentEditable` → 按钮切换为「💾 保存」→ 边框琥珀色
+- 保存：`fetch('/api/feishu')` → 拿 token → PUT 写回飞书 `提示词` 字段
+- 继承链（↑s010-02）：保存到源镜头的 `targetRecordId`
+- `data-record-id`：`build_html.py` 和 `refreshFromFeishu` 都在 `<tr>` 上挂此属性，编辑功能依赖它定位 Feishu 记录
+- 保存成功：按钮显示「✅ 已保存」2 秒后隐藏
 - `.prompt-covered` 绿色行：`镜 02, 03`（覆盖镜头列表，横排）
 - `.prompt-inherit` 红色行：`↑ 继承自 镜02`（仅继承时显示）
 - `.prompt-text` 正文区：微内阴影 + 暗底（像纸浮在面板上），右上角 `📋 复制` 按钮
@@ -141,6 +164,8 @@ python3 /opt/data/skills/scriptwriting/storyboard-shotlist/scripts/shotlist_serv
 ## Common Pitfalls
 
 - **URL params in credentials** (MOST COMMON): `OwBSbEQS...?table=...&view=...` instead of pure IDs → API returns `code=0` with 0 records → empty table with no error.
+- **Agent scrapes browser DOM for Feishu data (反模式)**: 飞书数据唯一来源是 REST API。Agent 不应通过 `browser_console` / `browser_snapshot` 抓取渲染后的 DOM 来获取分镜数据——慢、不可靠、且拿不到 record_id。正确做法：读 `feishu_config.json` → `curl` 直接调飞书 API。
+- **Agent generates prompt but doesn't write back**: 模块4 生成提示词后必须 PUT 写回飞书 `提示词` 字段。只输出文本不写回 → 数据丢失，浏览器 🔄 刷新后消失。
 - **`file://` doesn't work**: open via `http://192.168.3.65:8089/...` not SMB double-click.
 - **Server hangs on refresh**: Python `http.server.HTTPServer` is single-threaded. A slow Feishu API call blocks ALL other requests. Fix: use `socketserver.ThreadingMixIn` (already applied in `shotlist_server.py` v2). Symptom: page loads blank, health check times out, refresh spins forever.
 - **Row highlight**: `tbody tr:hover` = background only, no box-shadow/transition. Clicked = same style via `.clicked` class. `closePrompt()` removes `.clicked` from all rows. User rejected multi-color scheme.

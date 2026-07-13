@@ -139,10 +139,13 @@ def build_shot_row(shot):
     taici = shot.get("台词", "")
     taici_html = '<td class="c-dialogue">{}</td>'.format(taici) if taici else "<td></td>"
     
-    return '<tr>\n<td class="c-num">{镜号}</td>\n<td>{运镜}</td>\n<td>{空间关系}</td>\n<td>{摄影机}</td>\n<td>{机位}</td>\n<td>{动作调度}</td>\n{台词}\n<td class="c-dur">{时长}</td>\n<td>{音频}</td>\n<td class="c-notes">{导演备注}</td>\n<td class="c-prompt">{提示词}</td>\n</tr>'.format(
+    tishici = shot.get("提示词", "")
+    has_prompt = ' class="has-prompt"' if tishici and tishici.strip() else ''
+    return '<tr{} data-record-id="{}">\n<td class="c-num">{镜号}</td>\n<td>{运镜}</td>\n<td>{空间关系}</td>\n<td>{摄影机}</td>\n<td>{机位}</td>\n<td>{动作调度}</td>\n{台词}\n<td class="c-dur">{时长}</td>\n<td>{音频}</td>\n<td class="c-notes">{导演备注}</td>\n<td class="c-prompt">{提示词}</td>\n</tr>'.format(
+        has_prompt, shot.get("record_id",""),
         镜号=shot["镜号"], 运镜=shot.get("运镜",""), 空间关系=kongjian,
         摄影机=sheyingji, 机位=JIWEI_SHORT.get(shot.get("机位",""), shot.get("机位","")), 动作调度=shot.get("动作调度",""),
-        台词=taici_html, 时长=dur_disp, 音频=audio_html, 导演备注=shot.get("导演备注",""), 提示词=shot.get("提示词",""))
+        台词=taici_html, 时长=dur_disp, 音频=audio_html, 导演备注=shot.get("导演备注",""), 提示词=tishici)
 
 # ── Step 3: Assemble HTML ──
 def build_html(shots, title="电玩城的大小孩", scene_id="s010", scene_name="第一场"):
