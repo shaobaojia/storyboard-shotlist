@@ -59,8 +59,20 @@ X 按钮 onclick 写 `closePrompt()`（不要复杂 inline）。`closePrompt()` 
 ## 模板编辑铁律
 
 - SKILL.md → `skill_manage(action='patch')`，禁裸 `patch()`
-- feishu-backed.html → 终端 `python3 -c '...'`，避免 `/tmp/` 临时文件
-- 每次编辑后验证括号平衡，重建用 `build_html.py`
+- feishu-backed.html → 终端 `python3 -c '...'` 一行搞定。`execute_code` 的 `write_file` **反复证明不可靠**——多次静默不写盘
+- `patch(mode='replace')` 在 HTML 模板上几乎必失败（跨行 JS、转义字符、缩进差异）
+- Shell 转义地狱：Python 单引号嵌套时用 `'"'"'` 拼接法；复杂编辑先写 `.py` 文件再执行
+- 所有前端修改后必须重建：`python3 scripts/build_html.py`
+- **模板改了 build_html.py 也必须同步**——按钮、列、CSS 只在模板 JS 里加了但 build_html.py 没更新，静态 HTML 不会有
+- 避免往 `/tmp/` 写临时文件——被安全策略拦截
+- 每次 JS 编辑后验证 `{` 和 `}` 数量相等
+- 浏览器缓存顽固——重启服务后用 `curl` 先验证文件已更新，再让用户 `Ctrl+Shift+R`
+
+## 一键生成提示词
+
+`shotlist_server.py` 端点 `/api/generate-prompts`：前端多选镜头 → POST 镜号列表 → 代理拉飞书数据 + 读 `m4-prompt-template.md` → 调 DeepSeek API → PUT 写回飞书。`feishu_config.json` 需含 `deepseek_api_key`。
+
+**前端实现：** `buildRow()` 每行左侧加 checkbox（`.c-sel` + `.shot-chk`），`generateSelected()` 收集已勾选镜头号 → fetch `/api/generate-prompts` → 自动调用 `refreshFromFeishu()`。按钮通过 JS 动态注入 info bar（比改 build_html.py 更可靠）。`<colgroup>` 需加 `col style="width:28px"` 为 checkbox 列留空间，`<thead>` 需加空 `<th>`。
 
 ## 飞书架构
 
@@ -73,6 +85,22 @@ X 按钮 onclick 写 `closePrompt()`（不要复杂 inline）。`closePrompt()` 
 ## 内联编辑器事件隔离
 
 `td:has(textarea)` 选择器不可靠——取消按钮先删 textarea 再冒泡，选择器已不匹配。正确做法：按钮 onclick 中 `e.stopPropagation()`。
+
+## 自动生成提示词（/api/generate-prompts）
+
+### 架构
+前端多选镜头 → POST `{shots}` → `shotlist_server.py` 端点：
+1. 读 `feishu_config.json`（含 `deepseek_api_key`）→ 拉飞书数据
+2. 读 `m4-prompt-template.md` 为 system prompt
+3. 找上游提示词组继承共享声明
+4. 调 DeepSeek API → PUT 写回飞书
+5. 前端自动 `refreshFromFeishu()`
+
+### nth-child 全面翻车（加列必现）
+加 checkbox 列后，所有 nth-child 索引 +1——c11 零宽隐藏失效（提示词撑爆表格）、c9/c10 消失。修复：
+- 关键隐藏改用 class 选择器（`th.c-prompt-head, td.c-prompt`）不依赖列号
+- colgroup class 编号需同步移位（`c1→c2, c2→c3...c11→c12`）
+- 静态 HTML（build_html.py）和动态 JS（buildRow）列数必须一致
 
 ## 列宽拖拽
 

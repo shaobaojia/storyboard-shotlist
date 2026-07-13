@@ -51,16 +51,16 @@ input[name=scene],input[name^=sub-]{display:none}
 
 /* ── v2 11-column table ── */
 #v2-s010 table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:13px;min-width:900px}
-col.c1{width:42px}col.c2{width:72px}col.c3{width:160px}col.c4{width:110px}col.c5{width:90px}col.c6{width:auto;max-width:300px}col.c7{width:180px}col.c8{width:44px}col.c9{width:120px}col.c10{width:180px}col.c11{width:0}
+col.c2{width:42px}col.c3{width:72px}col.c4{width:160px}col.c5{width:110px}col.c6{width:90px}col.c7{width:auto;max-width:300px}col.c7{width:180px}col.c8{width:44px}col.c9{width:120px}col.c10{width:180px}col.c11{width:0}
 /* 提示词列隐藏（数据供面板读取） */
-th:nth-child(11),td:nth-child(11){width:0!important;padding:0!important;overflow:hidden!important;border:none!important;font-size:0!important;max-width:0!important}
+th.c-prompt-head,td.c-prompt{width:0!important;padding:0!important;overflow:hidden!important;border:none!important;font-size:0!important;max-width:0!important}
 
 thead th{background:var(--card);color:var(--head);padding:10px 6px;text-align:left;font-weight:600;font-size:12px;white-space:nowrap;position:sticky;top:0;z-index:1;border-bottom:2px solid var(--accent);border-right:1px solid rgba(255,255,255,.12)}
 tbody td{padding:8px 6px;border-bottom:1px solid var(--border);vertical-align:top;word-break:break-word;overflow-wrap:break-word}
 tbody tr:nth-child(odd){background:var(--row-light)}tbody tr:nth-child(even){background:var(--row-dark)}
 tbody tr:hover{background:rgba(244,63,94,.12)}
 .prompt-row.clicked td{background:rgba(244,63,94,.12)!important}
-tbody td:nth-child(1){white-space:nowrap}tbody td:nth-child(2){white-space:nowrap}tbody td:nth-child(4){white-space:nowrap;min-width:90px}tbody td:nth-child(5){white-space:nowrap}tbody td:nth-child(8){white-space:nowrap}
+tbody td:nth-child(2){white-space:nowrap}tbody td:nth-child(3){white-space:nowrap}tbody td:nth-child(5){white-space:nowrap;min-width:90px}tbody td:nth-child(6){white-space:nowrap}tbody td:nth-child(9){white-space:nowrap}
 .c-num{color:var(--accent);font-weight:700;text-align:center}
 tr.has-prompt .c-num::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:#22c55e;margin-right:4px;vertical-align:middle}
 .c-dur{text-align:center;white-space:nowrap;color:var(--green)}
@@ -176,6 +176,11 @@ tr.has-prompt .c-num::before{content:'';display:inline-block;width:6px;height:6p
 .btn-refresh{padding:4px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600}
 .btn-refresh:hover{opacity:.85}
 .btn-refresh:disabled{opacity:.4;cursor:default}
+.c-sel{width:28px;text-align:center;padding:4px 2px!important}
+.shot-chk{accent-color:var(--accent);cursor:pointer;width:14px;height:14px}
+.btn-generate{padding:4px 12px;background:var(--green);color:#000;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:700;margin-right:8px}
+.btn-generate:hover{opacity:.85}
+.btn-generate:disabled{opacity:.4;cursor:default}
 .refresh-status{font-size:11px;margin-left:8px}
 .refresh-status.ok{color:var(--green)}.refresh-status.err{color:var(--accent)}
 
@@ -445,14 +450,14 @@ async function refreshFromFeishu(){
       var dur = s.shichang ? Math.round(s.shichang) + 's' : '';
       var taiciHtml = s.taici ? '<td class="c-dialogue">' + s.taici + '</td>' : '<td></td>';
       var hasPrompt = s.tishici && String(s.tishici).trim();
-      return '<tr' + (hasPrompt ? ' class="has-prompt"' : '') + ' data-record-id="' + (s.rid||'') + '"><td class="c-num">' + s.jinghao + '</td><td>' + s.yunjing + '</td><td>' + formatKongjian(s.kongjian) + '</td><td>' + sheyingji + '</td><td>' + (JIWEI_SHORT[s.jiwei]||s.jiwei) + '</td><td>' + s.dongzuo + '</td>' + taiciHtml + '<td class="c-dur">' + dur + '</td><td>' + audioHtml + '</td><td class="c-notes">' + s.beizhu + '</td><td class="c-prompt">' + s.tishici + '</td></tr>';
+      return '<tr' + (hasPrompt ? ' class="has-prompt"' : '') + ' data-record-id="' + (s.rid||'') + '"><td class="c-sel"><input type="checkbox" class="shot-chk" data-shot="' + s.jinghao + '"></td><td class="c-num">' + s.jinghao + '</td><td>' + s.yunjing + '</td><td>' + formatKongjian(s.kongjian) + '</td><td>' + sheyingji + '</td><td>' + (JIWEI_SHORT[s.jiwei]||s.jiwei) + '</td><td>' + s.dongzuo + '</td>' + taiciHtml + '<td class="c-dur">' + dur + '</td><td>' + audioHtml + '</td><td class="c-notes">' + s.beizhu + '</td><td class="c-prompt">' + s.tishici + '</td></tr>';
     }
     
     var groups = {}; var order = [];
     shots.forEach(function(s){ var k = s.beatNum||'_'; if(!groups[k]){groups[k]=[];order.push(k);} groups[k].push(s); });
     var blocks = [];
-    var th = '<thead><tr><th>#</th><th>运镜</th><th>空间关系</th><th>摄影机</th><th>机位</th><th>动作调度</th><th>台词</th><th>时长</th><th>音频</th><th>导演备注</th><th>提示词</th></tr></thead>';
-    var cg = '<colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"><col class="c7"><col class="c8"><col class="c9"><col class="c10"><col class="c11"></colgroup>';
+    var th = '<thead><tr><th></th><th>#</th><th>运镜</th><th>空间关系</th><th>摄影机</th><th>机位</th><th>动作调度</th><th>台词</th><th>时长</th><th>音频</th><th>导演备注</th><th class="c-prompt-head">提示词</th></tr></thead>';
+    var cg = '<colgroup><col style="width:28px"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"><col class="c7"><col class="c8"><col class="c9"><col class="c10"><col class="c11"><col class="c12"></colgroup>';
     
     order.forEach(function(k){
       var gs = groups[k]; var b = gs[0];
@@ -909,6 +914,22 @@ function editCell(){
   };
 }
 
+
+function generateSelected(){
+  var chks=document.querySelectorAll('.shot-chk:checked');
+  if(!chks.length){alert('至少勾选一个镜头');return}
+  var shots=[];
+  chks.forEach(function(c){shots.push(c.getAttribute('data-shot'))});
+  shots.sort(function(a,b){return parseInt(a)-parseInt(b)});
+  var btn=document.getElementById('btn-generate');
+  btn.disabled=true;btn.textContent='生成中...';
+  fetch('/api/generate-prompts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({shots:shots})})
+  .then(function(r){return r.json()}).then(function(d2){
+    btn.disabled=false;btn.textContent='生成提示词';
+    if(d2.error){alert('失败: '+d2.error);return}
+    if(d2.results){var ok=d2.results.filter(function(r){return r.ok}).length;refreshFromFeishu()}
+  }).catch(function(e){btn.disabled=false;btn.textContent='生成提示词';alert('网络错误: '+e.message)})
+}
 
 function closePrompt() {
   var panel = document.getElementById('prompt-panel');

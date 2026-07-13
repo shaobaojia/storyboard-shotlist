@@ -83,7 +83,17 @@ HTML 渲染时按 `beat序号` 分组：
 
 Feishu OpenAPI does NOT return CORS headers (confirmed via `curl -X OPTIONS`). Any browser JS call to `open.feishu.cn` is blocked. Proxy runs on NAS, same-origin for HTML, forwards server-side.
 
-**Proxy HTTP method override:** The proxy defaults to forwarding requests with the same method. For Feishu record updates (which require PUT), browser JS passes `_method:'PUT'` in the JSON body, and the proxy uses it instead of the incoming POST method. This allows the save function to do `fetch('/api/feishu', {method:'POST', body:JSON.stringify({url:..., _method:'PUT', ...})})`.
+**Proxy HTTP method override:** The proxy defaults to forwarding requests with the same method. For Feishu record updates (which require PUT), browser JS passes `_method:'PUT'` in the JSON body, and the proxy uses it instead of the incoming POST method.
+
+### `/api/generate-prompts` — 前端一键生成提示词
+
+**请求：** `POST /api/generate-prompts` + `{"shots": ["13","14","15"]}`
+
+**流程：** 读 `feishu_config.json` → 拉飞书全场数据 → 找上游提示词组的共享声明 → 读 `m4-prompt-template.md` 拼 system prompt → 调 DeepSeek API → PUT 写回飞书 → 返回结果。
+
+**依赖：** `feishu_config.json` 中必须有 `deepseek_api_key` 字段。
+
+**前端集成：** 每行左侧 checkbox（`.shot-chk`），info bar 中「⚡ 生成提示词」按钮（JS 动态注入）。勾选镜头 → 点按钮 → loading → 自动 🔄 刷新。复选框列通过 `buildRow` 中的 `<td class="c-sel">` 渲染。
 
 ## Server Persistence
 

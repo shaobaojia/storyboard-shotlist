@@ -42,10 +42,11 @@ trigger: 用户提到"分镜""shot list""镜头拆分""分析剧本""审分镜""
 | 模块1（分析） | 无需加载 | — |
 | 模块2（创作） | `references/cinematic-grammar.md`、`references/character-business.md`、`references/ai-prompt-pitfalls.md` | 视听语法 + 表演动作 + AI提示词避坑 |
 | 模块3（审计） | `references/cinematic-grammar.md`、`references/production-notes.md` | 语法校验 + 失败模式对照 |
-| 模块4（提示词） | `references/css-pitfalls.md` | 提示词列 CSS 避坑（列隐藏、一字一换、两态切换） |
+| 模块4（提示词） | `references/m4-prompt-template.md`、`references/ai-prompt-pitfalls.md` | 提示词模板与规则（Agent 和代理共用）+ AI提示词避坑 |
+| 前端实现 | `references/frontend-notes.md`、`references/css-pitfalls.md` | HTML/CSS/JS 避坑、右键菜单、事件隔离 |
 | 单页框架 | `templates/multi-module.html` | 两层 Tab 片级容器模板 |
-| 提示词面板 | `references/prompt-panel.md` | 浮动窗口拖拽/调整大小实现参考 |
-| 飞书后端 | `templates/feishu-backed.html`、`scripts/build_html.py`、`scripts/shotlist_server.py`、`references/feishu-backend.md` | 飞书表格 Schema、数据管道、动态刷新、代理服务器 |
+| 提示词面板 | `references/prompt-panel.md` | 浮动窗口拖拽/调整大小 |
+| 飞书后端 | `templates/feishu-backed.html`、`scripts/build_html.py`、`scripts/shotlist_server.py`、`references/feishu-backend.md`、`feishu_config.json` | 数据管道、代理、一键生成提示词（`/api/generate-prompts`）、凭证 |
 
 > `references/music-design.md` 为模块2的可选补充——设计复杂音乐弧线时有更深层的方法论参考。
 
@@ -691,18 +692,6 @@ Agent：只改第 7 镜景别列→「已改。镜 6→7→8 景别过渡：中�
 - **⚠️ Agent 空间理解局限（自省）：** Agent 不构建三维空间模型——各字段当独立字符串处理，不是在看一个立体场景。涉及空间锚、运镜、相机调度、人物走位时，Agent 的修改极易与导演脑中的实际空间布局冲突。**铁律：修改空间锚或提示词中任何空间描述之前，必须先交叉对照动作调度列和运镜列，确认空间逻辑闭环。** 发现矛盾时，向导演描述矛盾点并等待确认，禁止自主推定。
 
 - **⚠️ 人物设定归属：** 人物长相/年龄/服装是提示词正文的内容（位于「人物：」段），不属于分镜表的任何一列。分镜表是镜头调度工具，不承载角色设定。不要在飞书表或 v2 分镜表中添加独立的人物字段。提示词中的人物描述开头用「@图片N —」标记引用，格式为 `人物：@图片N — {描述}`（@标记位于人物行内，不独立成行）。
-- v2 扩展至 11 列（c11 提示词）。c11 始终零宽隐藏作为面板数据源，无 toggle 开关
-- 列隐藏方案：`col` 元素 `display:none`/`visibility:collapse` 均不可靠，最终使用零宽折叠（`width:0;padding:0;overflow:hidden`），同时配合 `col` 宽度归零释放 table-layout:fixed 空间
-- `.c-prompt` 文字排版：必须 `white-space:pre-line`，禁用 `word-break:break-word`（导致一字一行）
-- 浏览器自检纪律：每次 CSS/布局修改后用 `browser_vision` 截图验证，不依赖单一快照或过往判断
-- **Feishu 前后端分离架构：** `templates/feishu-backed.html` + `scripts/build_html.py`（静态再生）+ `scripts/shotlist_server.py`（多线程代理,8089）。飞书多维表格做数据库，HTML 带「🔄 从飞书刷新」+ 提示词面板（点击弹出/↑继承/复制/全组高亮）。c11 零宽隐藏仅做面板数据源。beat 分组在 JS 刷新中同步渲染。详见 `references/feishu-backend.md`。
-- **hover/click 纪律：** 只用背景色（`rgba(244,63,94,.12)`），禁用 box-shadow/transition。点击态 `.clicked` 样式与 hover 完全一致。
-
-- **右键菜单（ctx-menu）：** `templates/feishu-backed.html` 实现了右键编辑动作调度。菜单通过 `contextmenu` 事件弹出（`e.preventDefault()` 阻止浏览器默认菜单），`position:fixed` 跟随鼠标。点击空白处自动消失。编辑时在 td 内插入 textarea + 保存/取消按钮，按钮必须加 `e.stopPropagation()` 防止事件冒泡触发提示词面板。
-
-- **X 关闭按钮：** onclick 必须写 `closePrompt()`（不要复杂的 inline 逻辑）。`closePrompt()` 内先 unpin 再关闭，确保 X 按钮在任何状态下都能关闭面板。模板编辑时必须验证 onclick 无转义引号残留（`\\'` 会导致 JS 静默失效）。
-
-- **内联编辑器事件隔离：** textarea 和按钮所在的 td 会触发行点击（弹提示词面板）。`td:has(textarea)` 选择器不可靠——取消按钮先删 textarea 再冒泡，选择器已不匹配。正确做法：直接在按钮 onclick 中 `e.stopPropagation()`。
 
 ---
 
