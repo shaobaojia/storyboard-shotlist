@@ -19,29 +19,18 @@ input[name=scene],input[name^=sub-]{display:none}
 /* ── Scene tabs ── */
 .scene-section{display:none}
 #scene-arc:checked~#arc-section{display:block}
-#scene-s010:checked~#s010-section{display:block}
-/* #scene-s020:checked~#s020-section{display:block} ... */
+{{SCENE_CSS}}
 .scene-tabs{display:flex;gap:0;padding:0;background:var(--card);border-bottom:2px solid var(--accent);overflow-x:auto}
 .scene-tabs label{display:block;padding:10px 16px;color:#888;font-size:13px;font-weight:600;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .2s;cursor:pointer;white-space:nowrap}
 .scene-tabs label:hover{color:var(--head);background:rgba(255,255,255,.03)}
-#scene-arc:checked~.scene-tabs label[for=scene-arc],
-#scene-s010:checked~.scene-tabs label[for=scene-s010]
-{border-bottom-color:var(--accent);color:var(--head)}
+{{SCENE_TAB_ACTIVE_CSS}}
 
 /* ── Sub-tabs ── */
 .sub-tabs{display:flex;gap:0;padding:0;background:var(--bg);border-bottom:1px solid var(--border)}
 .sub-tabs label{display:block;padding:8px 16px;color:var(--text);font-size:13px;font-weight:600;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .2s;cursor:pointer}
 .sub-tabs label:hover{color:var(--head)}
 .sub-content{display:none;padding:16px 0}
-#sub-beat-s010:checked~#beat-s010{display:block}
-#sub-v1-s010:checked~#v1-s010{display:block}
-#sub-v2-s010:checked~#v2-s010{display:block}
-#sub-prompt-s010:checked~#prompt-s010{display:block}
-#sub-beat-s010:checked~.sub-tabs label[for=sub-beat-s010],
-#sub-v1-s010:checked~.sub-tabs label[for=sub-v1-s010],
-#sub-v2-s010:checked~.sub-tabs label[for=sub-v2-s010],
-#sub-prompt-s010:checked~.sub-tabs label[for=sub-prompt-s010]
-{border-bottom-color:var(--accent);color:var(--head)}
+{{SUB_TAB_CSS}}
 
 /* ── Info bar ── */
 .info-bar{display:flex;gap:24px;flex-wrap:wrap;padding:12px 0;margin-bottom:12px;border-bottom:1px solid var(--border);font-size:13px}
@@ -50,7 +39,7 @@ input[name=scene],input[name^=sub-]{display:none}
 .info-bar .sep{color:var(--border);margin:0 4px}
 
 /* ── v2 11-column table ── */
-#v2-s010 table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:13px;min-width:900px}
+.scene-section table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:13px;min-width:900px}
 col.c1{width:42px}col.c2{width:72px}col.c3{width:160px}col.c4{width:110px}col.c5{width:90px}col.c6{width:auto;max-width:300px}col.c7{width:180px}col.c8{width:44px}col.c9{width:120px}col.c10{width:180px}col.c11{width:0}
 /* 提示词列隐藏（数据供面板读取） */
 th:nth-child(11),td:nth-child(11){width:0!important;padding:0!important;overflow:hidden!important;border:none!important;font-size:0!important;max-width:0!important}
@@ -309,9 +298,15 @@ th{position:relative}
     });
   });
 })();
+(function(){
+  document.querySelectorAll('.scene-section .sub-content table thead').forEach(bindColResize);
+})();
 
 // ── Feishu Refresh ──
 var JIWEI_SHORT = {"🔴 正打":"🔴正","🟡 反打":"🟡反","🟢 第三人称":"🟢三","🔵 空间环境":"🔵环","🟣 插入/切出":"🟣插"};
+var activeScene = "s010";
+
+function getActiveScene(){ var checked = document.querySelector("input[name=scene]:checked"); return checked ? checked.id.replace("scene-","") : "s010"; }
 
 function getSettings(){
   var raw = localStorage.getItem('feishu_cfg');
@@ -427,13 +422,19 @@ async function refreshFromFeishu(){
         beatNum: norm(f['beat序号']),
         beatType: norm(f['beat类型']),
         beatTitle: norm(f['beat标题']),
+        scene: norm(f['场次']),
         beatAction: norm(f['节拍动作'])
       };
       if (s.jinghao) shots.push(s);
     });
     shots.sort(function(a,b){ return a.jinghao.localeCompare(b.jinghao, undefined, {numeric:true}); });
     
-    // 4. Build beat-grouped HTML
+    // 4. Group shots by scene
+    var scenes = {}; var sceneOrder = [];
+    shots.forEach(function(s){ var sid = s.scene || 's010'; if(!scenes[sid]){scenes[sid]=[];sceneOrder.push(sid);} scenes[sid].push(s); });
+    if (sceneOrder.length === 0) { sceneOrder = ['s010']; scenes['s010'] = []; }
+    
+    // 5. Build beat-grouped HTML per scene
     function buildRow(s){
       var raw = s.jingbie.trim();
       var lensMatch = raw.match(/(\d+mm·(?:浅|中|深)(?:→(?:浅|中|深))?)/);
@@ -449,51 +450,60 @@ async function refreshFromFeishu(){
       return '<tr' + (hasPrompt ? ' class="has-prompt"' : '') + ' data-record-id="' + (s.rid||'') + '"><td class="c-num">' + s.jinghao + '</td><td>' + s.yunjing + '</td><td>' + formatKongjian(s.kongjian) + '</td><td>' + sheyingji + '</td><td>' + (JIWEI_SHORT[s.jiwei]||s.jiwei) + '</td><td>' + s.dongzuo + '</td>' + taiciHtml + '<td class="c-dur">' + dur + '</td><td>' + audioHtml + '</td><td class="c-notes">' + s.beizhu + '</td><td class="c-prompt">' + s.tishici + '</td></tr>';
     }
     
-    var groups = {}; var order = [];
-    shots.forEach(function(s){ var k = s.beatNum||'_'; if(!groups[k]){groups[k]=[];order.push(k);} groups[k].push(s); });
-    var blocks = [];
     var th = '<thead><tr><th>#</th><th>运镜</th><th>空间关系</th><th>摄影机</th><th>机位</th><th>动作调度</th><th>台词</th><th>时长</th><th>音频</th><th>导演备注</th><th>提示词</th></tr></thead>';
     var cg = '<colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"><col class="c7"><col class="c8"><col class="c9"><col class="c10"><col class="c11"></colgroup>';
     
-    order.forEach(function(k){
-      var gs = groups[k]; var b = gs[0];
-      if(k === '空间' || k === '_' && !b.beatType){
-        blocks.push('<div class="beat-section"><div class="space-label">▸ 空间建立镜 (' + gs.length + ' 镜)</div><div class="table-wrap"><table>' + cg + th + '<tbody>' + gs.map(buildRow).join('') + '</tbody></table></div></div>');
-      } else {
-        var lc = b.beatType.indexOf('戏点')!==-1 ? 'beat-red' : 'beat-dot';
-        var block = '<div class="beat-section"><span class="beat-label ' + lc + '">' + b.beatType + '</span><span class="beat-title">beat ' + k + '：' + b.beatTitle + ' (' + gs.length + ' 镜)</span>';
-        if(b.beatAction){
-          var parts = b.beatAction.split('→');
-          block += '<div class="beat-action">' + parts[0].trim() + (parts.length>1?'<br>'+parts[1].trim():'') + '</div>';
+    // 6. Replace scene containers
+    var totalAllShots = 0, totalAllDur = 0;
+    sceneOrder.forEach(function(sid){
+      var sceneShots = scenes[sid] || [];
+      var groups = {}; var order = [];
+      sceneShots.forEach(function(s){ var k = s.beatNum||'_'; if(!groups[k]){groups[k]=[];order.push(k);} groups[k].push(s); });
+      var blocks = [];
+      order.forEach(function(k){
+        var gs = groups[k]; var b = gs[0];
+        if(k === '空间' || k === '_' && !b.beatType){
+          blocks.push('<div class="beat-section"><div class="space-label">▸ 空间建立镜 (' + gs.length + ' 镜)</div><div class="table-wrap"><table>' + cg + th + '<tbody>' + gs.map(buildRow).join('') + '</tbody></table></div></div>');
+        } else {
+          var lc = b.beatType.indexOf('戏点')!==-1 ? 'beat-red' : 'beat-dot';
+          var block = '<div class="beat-section"><span class="beat-label ' + lc + '">' + b.beatType + '</span><span class="beat-title">beat ' + k + '：' + b.beatTitle + ' (' + gs.length + ' 镜)</span>';
+          if(b.beatAction){
+            var parts = b.beatAction.split('→');
+            block += '<div class="beat-action">' + parts[0].trim() + (parts.length>1?'<br>'+parts[1].trim():'') + '</div>';
+          }
+          block += '<div class="table-wrap"><table>' + cg + th + '<tbody>' + gs.map(buildRow).join('') + '</tbody></table></div></div>';
+          blocks.push(block);
         }
-        block += '<div class="table-wrap"><table>' + cg + th + '<tbody>' + gs.map(buildRow).join('') + '</tbody></table></div></div>';
-        blocks.push(block);
-      }
+      });
+      var container = document.getElementById('v2-' + sid);
+      if (container) { container.innerHTML = blocks.join(''); }
+      totalAllShots += sceneShots.length;
+      totalAllDur += sceneShots.reduce(function(a,s){return a + (s.shichang||0)}, 0);
     });
     
-    // 5. Replace v2-s010 content
-    var container = document.getElementById('v2-s010');
-    if (container && shots.length > 0) {
-      container.innerHTML = blocks.join('');
-    } else if (shots.length === 0) {
+    if (totalAllShots === 0) {
       setStatus('无数据，请检查飞书表格', 'err');
       if (btn) btn.disabled = false; var fb=document.getElementById('btn-refresh-float'); if(fb)fb.disabled=false;
       return;
     }
     
-    // Update stats
-    var totalDur = shots.reduce(function(a,s){return a + (s.shichang||0)}, 0);
-    setStatus(shots.length + '镜 ' + Math.floor(totalDur/60) + '′' + Math.round(totalDur%60) + '″', 'ok');
+    // Update stats for active scene
+    var activeSid = getActiveScene();
+    var activeShots = scenes[activeSid] || [];
+    if (activeSid === 'arc') activeShots = shots;
+    var activeDur = activeShots.reduce(function(a,s){return a + (s.shichang||0)}, 0);
+    setStatus(activeShots.length + '镜 ' + Math.floor(activeDur/60) + '′' + Math.round(activeDur%60) + '″', 'ok');
     
     // Re-attach prompt click handlers
     setTimeout(attachPromptClicks, 200);
     
-    // Update info bar stats
-    var infoBar = document.querySelector('.info-bar');
+    // Update info bar stats for active scene
+    var infoBar = document.querySelector('#' + activeSid + '-section .info-bar');
+    if (!infoBar) infoBar = document.querySelector('.info-bar');
     if (infoBar && infoBar.children.length >= 2) {
-      infoBar.children[1].innerHTML = '总镜数 <b>' + shots.length + '</b>';
+      infoBar.children[1].innerHTML = '总镜数 <b>' + activeShots.length + '</b>';
       if (infoBar.children.length >= 3) {
-        infoBar.children[2].innerHTML = '总时长 <b>' + Math.floor(totalDur/60) + '′' + Math.round(totalDur%60) + '″</b>';
+        infoBar.children[2].innerHTML = '总时长 <b>' + Math.floor(activeDur/60) + '′' + Math.round(activeDur%60) + '″</b>';
       }
     }
     
@@ -556,7 +566,7 @@ function openPrompt(shotNum, rowElement) {
   var coveredShots = [shotNum];
   if (promptText) {
     var rootSource = sourceShot !== shotNum ? sourceShot : shotNum;
-    document.querySelectorAll('#v2-s010 .prompt-row').forEach(function(r){
+    document.querySelectorAll('#v2-' + getActiveScene() + ' .prompt-row').forEach(function(r){
       var rc = r.querySelectorAll('td');
       if (rc.length < 11) return;
       var rp = rc[10].textContent.trim();
@@ -772,6 +782,9 @@ function parsePromptBlocks(text) {
     hr.insertBefore(sb,hr.firstChild);
   });
 })();
+(function(){
+  document.querySelectorAll('.scene-section .sub-content table thead').forEach(bindColResize);
+})();
 
 function bounceCopyBtn(){
   var b=document.getElementById('prompt-copy');if(!b)return;
@@ -929,7 +942,7 @@ function closePrompt() {
 }
 
 function attachPromptClicks() {
-  document.querySelectorAll('#v2-s010 tbody tr').forEach(function(row){
+  document.querySelectorAll('.scene-section .sub-content tbody tr').forEach(function(row){
     var numCell = row.querySelector('.c-num');
     if (!numCell || row.classList.contains('prompt-row')) return;
     row.classList.add('prompt-row');
@@ -948,30 +961,30 @@ function attachPromptClicks() {
 
 
 // 列宽拖拽
-(function(){
-  document.querySelectorAll('#v2-s010 table thead').forEach(function(thead){
-    var ths = thead.querySelectorAll('th');
-    var table = thead.closest('table');
-    var colgroup = table.querySelector('colgroup');
-    var cols = colgroup ? colgroup.querySelectorAll('col') : [];
-    if (!cols.length) return;
+function bindColResize(thead){
+  var ths = thead.querySelectorAll('th');
+  var table = thead.closest('table');
+  var colgroup = table.querySelector('colgroup');
+  var cols = colgroup ? colgroup.querySelectorAll('col') : [];
+  if (!cols.length) return;
+  
+  ths.forEach(function(th, i){
+    if (i === ths.length - 1) return;
+    if (th.querySelector('.col-resize')) return; // already bound
+    var handle = document.createElement('div');
+    handle.className = 'col-resize';
+    th.style.position = 'relative';
+    th.appendChild(handle);
     
-    ths.forEach(function(th, i){
-      if (i === ths.length - 1) return; // skip last col
-      var handle = document.createElement('div');
-      handle.className = 'col-resize';
-      th.style.position = 'relative';
-      th.appendChild(handle);
-      
-      var startX, startW, resizing = false;
-      handle.addEventListener('mousedown', function(e){
-        resizing = true; startX = e.clientX;
+    var startX, startW, resizing = false;
+    handle.addEventListener('mousedown', function(e){
+      resizing = true; startX = e.clientX;
         // Lock ALL columns in ALL tables to current pixel widths
-        document.querySelectorAll('#v2-s010 colgroup').forEach(function(cg){
+        var sceneSection = table.closest('.scene-section'); if(sceneSection){ sceneSection.querySelectorAll('colgroup').forEach(function(cg){
           cg.querySelectorAll('col').forEach(function(c){
             if (!c.style.width) c.style.width = getComputedStyle(c).width;
           });
-        });
+        })} 
         startW = parseFloat(cols[i].style.width);
         handle.classList.add('active');
         e.preventDefault(); e.stopPropagation();
@@ -981,17 +994,19 @@ function attachPromptClicks() {
         var nw = Math.max(30, startW + e.clientX - startX);
         cols[i].style.width = nw + 'px';
         // Sync same column across ALL beat-section tables
-        document.querySelectorAll('#v2-s010 colgroup').forEach(function(cg){
+        var sceneSection = table.closest('.scene-section'); if(sceneSection){ sceneSection.querySelectorAll('colgroup').forEach(function(cg){
           var allCols = cg.querySelectorAll('col');
           if (allCols[i] && allCols[i] !== cols[i]) allCols[i].style.width = nw + 'px';
-        });
+        })} 
       });
       document.addEventListener('mouseup', function(){
         if (!resizing) return;
         resizing = false; handle.classList.remove('active');
       });
     });
-  });
+}
+(function(){
+  document.querySelectorAll('.scene-section .sub-content table thead').forEach(bindColResize);
 })();
 
 // Attach clicks after initial load + auto-refresh from Feishu
@@ -1001,6 +1016,21 @@ document.addEventListener('DOMContentLoaded', function(){
     var s=document.getElementById('sidebar');if(s){s.classList.add('open');s.querySelector('.sidebar-toggle').textContent='◀';}
   }
   setTimeout(attachPromptClicks, 500);
+  
+  // Scene tab switching: re-bind handlers on tab change
+  document.querySelectorAll('input[name=scene]').forEach(function(radio){
+    radio.addEventListener('change', function(){
+      activeScene = this.id.replace('scene-', '');
+      setTimeout(attachPromptClicks, 100);
+      // Re-bind column resize for new scene's tables
+      setTimeout(function(){
+        document.querySelectorAll('.scene-section .sub-content table thead').forEach(function(thead){
+          if (thead.querySelector('.col-resize')) return; // already bound
+          bindColResize(thead);
+        });
+      }, 200);
+    });
+  });
 });
 // Also attach after tab switch
 document.querySelectorAll('[name=scene], [name^=sub-]').forEach(function(r){

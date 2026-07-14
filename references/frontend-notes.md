@@ -13,6 +13,17 @@
 ### str.replace() 全局替换翻车
 `content.replace(old_row, new_row)` 多镜相同内容时全部被替换。必须用位置索引：`content[:start] + new + content[end:]`，从后往前处理。
 
+### str.replace() 多位置匹配 → 括号错乱（致命）
+
+**症状：** 用 `str.replace('});\n})();', ...)` 改 JS 模板后，node --check 报 syntax error，且错误行号和实际修改位置不匹配。反复修补后仍有新错误。
+
+**根因：** JS 模板中多处使用相同的闭合模式（IIFE 结尾 `});\n})();`、forEach 嵌套等）。`str.replace()` 全局匹配所有位置，一次改动同时破坏多处括号平衡。并且 `count=1` 不能解决问题——因为两处歧义交替出现，每次修复一处就重新破坏另一处。
+
+**正确做法：** 
+- 用**唯一上下文**定位：搜前后 3-4 行的独特组合作为 old_string，确保只匹配目标位置
+- 或直接用**行号数组切片**：`lines = c.split('\n'); lines[1006:1008] = new_lines; c = '\n'.join(lines)`
+- 改动后**立即 `node --check`** 验证（不要等到 build 后才发现）
+
 ### Radio 按钮隐藏
 `input[name=scene],input[name^=sub-]{display:none}`，否则 Tab 上方裸露小圆点。
 
@@ -135,3 +146,45 @@ X 按钮 onclick 写 `closePrompt()`（不要复杂 inline）。`closePrompt()` 
 ## 动态刷新 JS 同步
 
 `refreshFromFeishu` 必须含 beat 分组渲染，不能只拼平板 `<tr>`。重建后调用 `attachPromptClicks()`。
+
+## 多场景支持（单页多场）
+
+页面通过两层 Tab 切换场次（价值弧线 + s010/s020/...）。CSS 和 JS 均需场景化，禁止硬编码 `s010`。
+
+### CSS 占位符系统
+
+模板内不再硬编码场景 CSS 规则，改为三个占位符在 `build_html.py` 构建时动态生成：
+
+| 占位符 | 生成内容 |
+|:---|:---|
+| `{{SCENE_CSS}}` | `#scene-{sid}:checked~#{sid}-section{display:block}` 每场一行 |
+| `{{SCENE_TAB_ACTIVE_CSS}}` | 场景 Tab 选中高亮规则（含 arc Tab） |
+| `{{SUB_TAB_CSS}}` | 子 Tab（v2）显示/隐藏规则 |
+
+表样式选择器从 `#v2-s010 table` 改为 `.scene-section table`（类选择器，不依赖场景 ID）。
+
+### JS 场景选择
+
+- **`activeScene`** 全局变量（默认 `"s010"`）+ **`getActiveScene()`** 从当前选中 radio 读取
+- 所有 `#v2-s010` 硬编码替换为动态拼接：`'#v2-' + getActiveScene()`
+- `attachPromptClicks` 和列宽拖拽改为 `.scene-section .sub-content tbody tr` 类选择器
+
+### 场次切换事件
+
+`input[name=scene]` 的 `change` 事件 → 更新 `activeScene` → 重新 `attachPromptClicks()` + `bindColResize()`
+
+### refreshFromFeishu 场次分组
+
+JS 端新增 `scene` 字段（从飞书 `场次` 列读取），`refreshFromFeishu()` 按场次分组后分别写入 `#v2-{sid}` 容器。状态栏统计仅显示当前活跃场次。
+
+### build_html.py 多场构建
+
+`records_to_shots()` 新增 `场次` 字段 → `group_by_scene()` 按场次分组 → `build_html()` 接受 `OrderedDict{scene_id: [shots]}` → 循环生成所有场次的 Tab、CSS、Section。`SCENE_NAMES` 字典映射 scene_id 到中文名。
+
+### 列宽拖拽重构
+
+从 IIFE 改为命名函数 `bindColResize(thead)`，支持场次切换后重新绑定。同步锁定范围从 `#v2-s010 colgroup` 改为 `table.closest('.scene-section') colgroup`。
+
+### 文件名保持兼容
+
+输出文件名仍为 `s010_feishu_backed.html`（历史 URL 不变），内容已支持多场次。

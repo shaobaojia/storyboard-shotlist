@@ -1,32 +1,28 @@
 """
-Feishu Bitable → HTML Storyboard Builder
-==========================================
-Reads storyboard data from a Feishu bitable, generates v2 HTML.
+Feishu Bitable → HTML Storyboard Builder (multi-scene)
+========================================================
+Reads storyboard data from a Feishu bitable, generates multi-scene HTML.
 
 Usage:
     python3 build_html.py
 
-Requires:
-    - /tmp/s010_canonical.json (output from read_bridge)
-    - templates/feishu-backed.html (template with {{TITLE}}, {{SCENE_TABS}}, {{ARC_SECTION}}, {{SCENE_SECTIONS}})
-
 Output:
-    - /volume1/主目录/Hermes/read/done/{场次}_feishu_backed.html
+    /volume1/主目录/Hermes/read/done/{title}_feishu_backed.html
 
-Dependencies: Python stdlib only (json, subprocess optional for token fetch)
+Dependencies: Python stdlib only (json, subprocess for token fetch)
 """
 
 import json
 import re
+import os
+from collections import OrderedDict
 
 # ── Config (override via env vars) ──
-import os
 APP_ID = os.environ.get("FEISHU_APP_ID", "cli_aa9045b4afb85be9")
 APP_SECRET = os.environ.get("FEISHU_APP_SECRET", "")
 APP_TOKEN = os.environ.get("FEISHU_APP_TOKEN", "OwBSbEQS5aY9HksVVBYcYUnVnlg")
 TABLE_ID = os.environ.get("FEISHU_TABLE_ID", "tbl2gBoybDUPpPz2")
-
-JINGBIE_STARS = {}  # deprecated — 景别 now carries its own stars from Feishu
+TITLE = os.environ.get("FEISHU_TITLE", "电玩城的大小孩")
 
 JIWEI_SHORT = {
     "🔴 正打": "🔴正",
@@ -34,6 +30,18 @@ JIWEI_SHORT = {
     "🟢 第三人称": "🟢三",
     "🔵 空间环境": "🔵环",
     "🟣 插入/切出": "🟣插",
+}
+
+# Scene naming: map scene_id to display name
+SCENE_NAMES = {
+    "s010": "第一场",
+    "s020": "第二场",
+    "s030": "第三场",
+    "s040": "第四场",
+    "s050": "第五场",
+    "s060": "第六场",
+    "s070": "第七场",
+    "s080": "第八场",
 }
 
 # ── Step 1: Fetch from Feishu ──
@@ -75,12 +83,13 @@ def normalize(val):
     return str(val) if val is not None else ""
 
 def records_to_shots(records):
-    """Convert Feishu record list to clean shot dicts."""
+    """Convert Feishu record list to clean shot dicts, grouped by 场次."""
     shots = []
     for r in records:
         f = r.get("fields", {})
         s = {
             "record_id": r.get("record_id", ""),
+            "场次": normalize(f.get("场次", "")),
             "镜号": normalize(f.get("镜号", "")),
             "运镜": normalize(f.get("运镜", "")),
             "空间关系": normalize(f.get("空间关系", "")),
@@ -105,6 +114,16 @@ def records_to_shots(records):
     shots.sort(key=lambda x: x["镜号"])
     return shots
 
+def group_by_scene(shots):
+    """Group shots by 场次 field, return OrderedDict {scene_id: [shots]}."""
+    scenes = OrderedDict()
+    for s in shots:
+        sid = s.get("场次", "")
+        if sid not in scenes:
+            scenes[sid] = []
+        scenes[sid].append(s)
+    return scenes
+
 # ── Step 2: Build HTML rows ──
 def format_sheyingji(raw):
     """Parse 景别 text into HTML: framing lines + ↓ separator + lens-tech span."""
@@ -121,10 +140,7 @@ def format_sheyingji(raw):
     return framing + lens_html
 
 def build_shot_row(shot):
-    # 摄影机 cell: 景别字段已包含 ★ + ↓ + 焦段·景深，格式化后搬运
     sheyingji = format_sheyingji(shot.get("景别", ""))
-    
-    # 空间关系：在 [ 前加 <wbr>，\n 换 <br>
     kongjian = shot.get("空间关系", "").replace("\n", "<br>").replace("[", "<wbr>[")
     
     yinpin = shot.get("音频", "")
@@ -147,21 +163,8 @@ def build_shot_row(shot):
         摄影机=sheyingji, 机位=JIWEI_SHORT.get(shot.get("机位",""), shot.get("机位","")), 动作调度=shot.get("动作调度",""),
         台词=taici_html, 时长=dur_disp, 音频=audio_html, 导演备注=shot.get("导演备注",""), 提示词=tishici)
 
-# ── Step 3: Assemble HTML ──
-def build_html(shots, title="电玩城的大小孩", scene_id="s010", scene_name="第一场"):
-    shot_rows = "\n".join(build_shot_row(s) for s in shots)
-    total_shots = len(shots)
-    total_dur = sum(float(s.get("时长_秒", 0)) for s in shots if s.get("时长_秒"))
-    
-    scene_tabs = '<input type="radio" name="scene" id="scene-arc" checked>\n<input type="radio" name="scene" id="scene-{sid}">\n<nav class="scene-tabs">\n<label for="scene-arc">价值弧线</label>\n<label for="scene-{sid}">{sid} {sname}</label>\n</nav>'.format(sid=scene_id, sname=scene_name)
-    
-    arc_section = '<section id="arc-section" class="scene-section">\n<div class="placeholder-scene">价值弧线 — 待从模块0导入</div>\n</section>'
-    
-    info_bar = '<span>{sid} {sname}</span>\n<span>总镜数 <b>{shots}</b></span>\n<span>总时长 <b>{min}′{sec}″</b></span>\n<span class="sep">|</span>\n<span>机位：🔴正打 🟡反打 🟢第三人称 🔵空间环境 🟣插入/切出</span>\n<span class="sep">|</span>\n<button class="btn-refresh" id="btn-refresh" onclick="refreshFromFeishu()">🔄 从飞书刷新</button>\n<span id="refresh-status" class="refresh-status"></span>\n<span class="sep">|</span>\n<button class="btn-refresh" onclick="openSettings()" style="background:var(--row-light);color:var(--text)">⚙</button>'.format(
-        sid=scene_id, sname=scene_name, shots=total_shots, min=int(total_dur//60), sec=int(total_dur%60))
-    
-    # Build beat-grouped table
-    from collections import OrderedDict
+def build_beat_table(shots):
+    """Build beat-grouped table HTML for one scene's shots."""
     beats = OrderedDict()
     for s in shots:
         bk = s.get("beat序号", "")
@@ -177,14 +180,12 @@ def build_html(shots, title="电玩城的大小孩", scene_id="s010", scene_name
         bshots = bd["shots"]
         
         if bk == "空间":
-            # Space label block
             block = '<div class="beat-section">\n<div class="space-label">▸ 空间建立镜 ({n} 镜)</div>\n<div class="table-wrap">\n<table>\n<colgroup>\n<col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"><col class="c7"><col class="c8"><col class="c9"><col class="c10"><col class="c11">\n</colgroup>\n<thead><tr><th>#</th><th>运镜</th><th>空间关系</th><th>摄影机</th><th>机位</th><th>动作调度</th><th>台词</th><th>时长</th><th>音频</th><th>导演备注</th><th>提示词</th></tr></thead>\n<tbody>\n{rows}\n</tbody>\n</table>\n</div>\n</div>'.format(n=len(bshots), rows="\n".join(build_shot_row(s) for s in bshots))
         else:
             label_class = "beat-red" if "戏点" in btype else "beat-dot"
             title_text = "beat {n}：{t} ({c} 镜)".format(n=bk, t=btitle, c=len(bshots))
             block = '<div class="beat-section">\n<span class="beat-label {lc}">{bt}</span>\n<span class="beat-title">{title}</span>\n'.format(lc=label_class, bt=btype, title=title_text)
             if baction:
-                # Split 外界动作/人物反应 at → for line break
                 parts = baction.split('→', 1)
                 action_html = parts[0].strip()
                 if len(parts) > 1:
@@ -193,9 +194,20 @@ def build_html(shots, title="电玩城的大小孩", scene_id="s010", scene_name
             block += '<div class="table-wrap">\n<table>\n<colgroup>\n<col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"><col class="c7"><col class="c8"><col class="c9"><col class="c10"><col class="c11">\n</colgroup>\n<thead><tr><th>#</th><th>运镜</th><th>空间关系</th><th>摄影机</th><th>机位</th><th>动作调度</th><th>台词</th><th>时长</th><th>音频</th><th>导演备注</th><th>提示词</th></tr></thead>\n<tbody>\n{rows}\n</tbody>\n</table>\n</div>\n</div>'.format(rows="\n".join(build_shot_row(s) for s in bshots))
         beat_blocks.append(block)
     
-    v2_table = "\n".join(beat_blocks)
+    return "\n".join(beat_blocks)
+
+def build_one_scene_section(shots, scene_id):
+    """Build one scene's section HTML (info bar + beat table)."""
+    sname = SCENE_NAMES.get(scene_id, scene_id)
+    total_shots = len(shots)
+    total_dur = sum(float(s.get("时长_秒", 0)) for s in shots if s.get("时长_秒"))
     
-    s010_section = '''<section id="{sid}-section" class="scene-section">
+    info_bar = '<span>{sid} {sname}</span>\n<span>总镜数 <b>{shots}</b></span>\n<span>总时长 <b>{min}′{sec}″</b></span>\n<span class="sep">|</span>\n<span>机位：🔴正打 🟡反打 🟢第三人称 🔵空间环境 🟣插入/切出</span>\n<span class="sep">|</span>\n<button class="btn-refresh" onclick="refreshFromFeishu()">🔄 从飞书刷新</button>\n<span id="refresh-status" class="refresh-status"></span>\n<span class="sep">|</span>\n<button class="btn-refresh" onclick="openSettings()">⚙</button>'.format(
+        sid=scene_id, sname=sname, shots=total_shots, min=int(total_dur//60), sec=int(total_dur%60))
+    
+    v2_table = build_beat_table(shots)
+    
+    return '''<section id="{sid}-section" class="scene-section">
 
 <input type="radio" name="sub-{sid}" id="sub-v2-{sid}" checked>
 <nav class="sub-tabs">
@@ -207,16 +219,65 @@ def build_html(shots, title="电玩城的大小孩", scene_id="s010", scene_name
 <div id="v2-{sid}" class="sub-content">{table}</div>
 
 </section>'''.format(sid=scene_id, info=info_bar, table=v2_table)
+
+# ── Step 3: Assemble HTML ──
+def build_html(scenes, title=TITLE):
+    """Build complete multi-scene HTML.
     
-    scene_sections = arc_section + "\n" + s010_section
+    Args:
+        scenes: OrderedDict {scene_id: [shots]}
+        title: HTML title
+    """
+    # Build scene tabs
+    scene_ids = list(scenes.keys())
+    # Radio inputs
+    radios = '<input type="radio" name="scene" id="scene-arc" checked>\n'
+    for sid in scene_ids:
+        radios += '<input type="radio" name="scene" id="scene-{sid}">\n'.format(sid=sid)
+    # Tab labels
+    labels = '<nav class="scene-tabs">\n<label for="scene-arc">价值弧线</label>\n'
+    for sid in scene_ids:
+        sname = SCENE_NAMES.get(sid, sid)
+        labels += '<label for="scene-{sid}">{sid} {sname}</label>\n'.format(sid=sid, sname=sname)
+    labels += '</nav>'
+    scene_tabs = radios + labels
     
-    with open("/opt/data/skills/scriptwriting/storyboard-shotlist/templates/feishu-backed.html") as f:
+    # Arc section (placeholder)
+    arc_section = '<section id="arc-section" class="scene-section">\n<div class="placeholder-scene">价值弧线 — 待从模块0导入</div>\n</section>'
+    
+    # Scene sections
+    sections = [arc_section]
+    for sid in scene_ids:
+        sections.append(build_one_scene_section(scenes[sid], sid))
+    scene_sections_html = "\n".join(sections)
+    
+    # Generate scene-specific CSS rules
+    scene_css_lines = []
+    tab_active_lines = ['#scene-arc:checked~.scene-tabs label[for=scene-arc],']
+    sub_tab_lines = []
+    for sid in scene_ids:
+        scene_css_lines.append('#scene-{sid}:checked~#{sid}-section{{display:block}}'.format(sid=sid))
+        tab_active_lines.append('#scene-{sid}:checked~.scene-tabs label[for=scene-{sid}],'.format(sid=sid))
+        for sub in ['v2']:  # expand when adding v1/beat tabs
+            sub_tab_lines.append('#sub-{sub}-{sid}:checked~#{sub}-{sid}{{display:block}}'.format(sub=sub, sid=sid))
+            sub_tab_lines.append('#sub-{sub}-{sid}:checked~.sub-tabs label[for=sub-{sub}-{sid}],'.format(sub=sub, sid=sid))
+    # Remove trailing comma from last line, add the rule body
+    tab_active_css = "\n".join(tab_active_lines).rstrip(',') + "\n{border-bottom-color:var(--accent);color:var(--head)}"
+    sub_tab_css = "\n".join(sub_tab_lines).rstrip(',') + "\n{border-bottom-color:var(--accent);color:var(--head)}"
+    scene_css = "\n".join(scene_css_lines)
+    
+    # Load template
+    tmpl_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "templates", "feishu-backed.html")
+    with open(tmpl_path) as f:
         template = f.read()
     
     html = template.replace("{{TITLE}}", title)
     html = html.replace("{{SCENE_TABS}}", scene_tabs)
     html = html.replace("{{ARC_SECTION}}", arc_section)
-    html = html.replace("{{SCENE_SECTIONS}}", scene_sections)
+    html = html.replace("{{SCENE_SECTIONS}}", scene_sections_html)
+    html = html.replace("{{SCENE_CSS}}", scene_css)
+    html = html.replace("{{SCENE_TAB_ACTIVE_CSS}}", tab_active_css)
+    html = html.replace("{{SUB_TAB_CSS}}", sub_tab_css)
     
     return html
 
@@ -225,9 +286,21 @@ if __name__ == "__main__":
     token = get_token()
     records = fetch_all_records(token, APP_TOKEN, TABLE_ID)
     shots = records_to_shots(records)
-    html = build_html(shots)
+    scenes = group_by_scene(shots)
     
-    out = "/volume1/主目录/Hermes/read/done/{}_feishu_backed.html".format("s010")
+    # Filter out entries with empty scene_id (shouldn't happen, but guard)
+    scenes = OrderedDict((k, v) for k, v in scenes.items() if k)
+    
+    if not scenes:
+        print("ERROR: No scene data found")
+        exit(1)
+    
+    html = build_html(scenes)
+    
+    total_shots = sum(len(v) for v in scenes.values())
+    out = "/volume1/主目录/Hermes/read/done/s010_feishu_backed.html"  # multi-scene, keep legacy filename
     with open(out, "w") as f:
         f.write(html)
-    print("OK: {} ({} shots, {}KB)".format(out, len(shots), len(html)//1024))
+    
+    scene_info = ", ".join("{}:{}镜".format(k, len(v)) for k, v in scenes.items())
+    print("OK: {} ({} shots total, {}KB) [{}]".format(out, total_shots, len(html)//1024, scene_info))

@@ -126,9 +126,23 @@ top:40px; right:40px; width:500px; height:calc(100vh - 80px); max-width:90vw
 
 `position:fixed;left:0;top:50%` 红色竖条 `▶`（12×36px，呼吸脉冲光晕动画）。展开后 48px 宽面板，内含 🔄 和 ⚙ 两个 32×32 方形按钮。状态 localStorage 持久化。
 
-## 页面加载自动刷新
+## 页面数据同步机制
 
-`DOMContentLoaded` 后 800ms，若 `readFeishuConfig()` 返回有效凭证 → 自动调用 `refreshFromFeishu()`。F5 即实时数据。
+**不再自动刷新。** F5 直接读本地静态 HTML（秒开），数据由 🔄 按钮一路贯通到磁盘：
+
+```
+🔄 从飞书刷新 → JS fetch 飞书 API → 渲染 DOM
+                                    ↓
+                    fetch('/api/rebuild') → shotlist_server 调 build_html.py
+                                    ↓
+                              覆盖静态 HTML 文件
+                                    ↓
+                    F5 / Ctrl+R → 永远最新
+```
+
+- `shotlist_server.py` 的 `/api/rebuild` 端点读取 `feishu_config.json` 凭证，注入 `FEISHU_APP_SECRET` 环境变量后运行 `build_html.py`
+- `build_html.py` 从飞书 API 拉全量数据重建 HTML
+- 重建在服务端 subprocess 中执行，与前端异步，不阻塞 UI
 
 ## 提示词注释 [镜02] 格式
 
