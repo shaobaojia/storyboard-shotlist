@@ -23,6 +23,8 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/health":
             self._send_json(200, {"status": "ok"})
+        elif self.path == "/api/rebuild":
+            self._rebuild()
         elif self.path.startswith("/api/feishu"):
             self._proxy_request("GET")
         else:
@@ -65,6 +67,27 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header("Content-Length", len(body))
         self.end_headers()
         self.wfile.write(body)
+
+    def _rebuild(self):
+        import subprocess
+        script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "build_html.py")
+        # Read feishu_config.json for credentials
+        config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "feishu_config.json")
+        env = os.environ.copy()
+        if os.path.exists(config_path):
+            try:
+                with open(config_path) as f:
+                    cfg = json.load(f)
+                env["FEISHU_APP_SECRET"] = cfg.get("app_secret", "")
+            except: pass
+        try:
+            result = subprocess.run(["python3", script], capture_output=True, text=True, timeout=60, env=env)
+            if result.returncode == 0:
+                self._send_json(200, {"status": "ok", "output": result.stdout.strip()})
+            else:
+                self._send_json(500, {"status": "error", "stderr": result.stderr.strip()})
+        except Exception as e:
+            self._send_json(500, {"status": "error", "stderr": str(e)})
 
     def do_OPTIONS(self):
         self.send_response(204)

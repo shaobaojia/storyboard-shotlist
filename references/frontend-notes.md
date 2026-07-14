@@ -53,7 +53,33 @@ X 按钮 onclick 写 `closePrompt()`（不要复杂 inline）。`closePrompt()` 
 ### HTML 元素删除后清理引用
 删除带 id 元素后，必须 grep 所有 `getElementById` 并删除。null.setter → TypeError。
 
-### patch 在 HTML JS 上静默失败
+### 粘贴按钮读旧值（闭包捕获过期变量）
+
+症状：面板编辑提示词 → 保存成功 → 点复制 → 复制的是编辑前的旧文本。
+
+根因：`openPrompt()` 内 `copyBtn.onclick` 闭包捕获了局部变量 `promptText`。`savePrompt()` 只更新了 `currentShotData.promptText`，没更新闭包里的局部变量。
+
+修复：复制按钮改为读 `currentShotData && currentShotData.promptText`，不读局部变量。
+
+### readFeishuConfig 未定义 → 页面加载不自动刷新
+
+症状：F5 后页面显示旧静态数据，800ms 自动刷新不触发。
+
+根因：`DOMContentLoaded` 回调调用了 `readFeishuConfig()`，但该函数从未定义（只有 `getSettings()` 存在）。JS 静默报错，自动刷新跳过。
+
+修复：添加别名 `function readFeishuConfig(){ return getSettings(); }`。
+
+### F5 后数据回退到旧版（静态 HTML 未同步）
+
+症状：🔄 从飞书刷新后数据正确，但 F5 刷新浏览器数据回到旧版。
+
+根因：`refreshFromFeishu()` 只更新内存 DOM，不更新磁盘上的静态 HTML 文件。F5 重新加载静态文件，看到的仍是旧数据。
+
+修复：两处改动——
+1. `shotlist_server.py` 加 `/api/rebuild` 端点，读取 `feishu_config.json` 凭证后运行 `build_html.py` 重建静态 HTML
+2. `refreshFromFeishu()` 末尾加 `fetch('/api/rebuild')` 异步触发重建
+
+注意：`build_html.py` 需 `FEISHU_APP_SECRET` 环境变量——`_rebuild()` 从 `feishu_config.json` 读 `app_secret` 传入 subprocess env。
 跨行 JS 含转义字符，`patch()` 匹配常失败或产碎代码。终端 `python3 -c '...'` 一行搞定。`execute_code` 的 `write_file` 多次不写盘，不可靠。
 
 ## 模板编辑铁律

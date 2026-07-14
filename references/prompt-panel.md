@@ -194,3 +194,11 @@ if (copyBtn) { copyBtn.onclick = function(){ ... }; }
 ```
 
 必须先解钉再调 `closePrompt()`——因为 `closePrompt` 第一行 `if(pinned)return`，在内部解钉逻辑永远走不到。
+
+### 9. 复制按钮读旧值（闭包捕获过期变量）
+
+症状：编辑提示词 → 保存成功 → 点复制 → 粘贴的是编辑前的旧文本。
+
+根因：`openPrompt()` 中 `copyBtn.onclick` 闭包捕获了局部变量 `promptText`。`savePrompt()` 更新了 `currentShotData.promptText` 但闭包里仍是旧值。
+
+修复：复制按钮改为读 `currentShotData && currentShotData.promptText`，不依赖闭包里的局部变量。

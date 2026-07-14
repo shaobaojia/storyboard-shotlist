@@ -317,6 +317,7 @@ function getSettings(){
   var raw = localStorage.getItem('feishu_cfg');
   return raw ? JSON.parse(raw) : null;
 }
+function readFeishuConfig(){ return getSettings(); }
 
 function openSettings(){
   var cfg = getSettings();
@@ -496,6 +497,9 @@ async function refreshFromFeishu(){
       }
     }
     
+    // Rebuild static HTML in background (so F5 shows latest data)
+    fetch('/api/rebuild').catch(function(){});
+    
   } catch(e) {
     setStatus('失败: ' + e.message, 'err');
   } finally {
@@ -584,7 +588,7 @@ function openPrompt(shotNum, rowElement) {
   // Copy button handler (may not exist if no prompt text)
   var copyBtn = document.getElementById('prompt-copy');
   if (copyBtn) { copyBtn.onclick = function(){
-    var text = (promptText || '').replace(/\[.*?\]/g, '').trim();
+    var text = (currentShotData && currentShotData.promptText || '').replace(/\[.*?\]/g, '').trim();
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).then(function(){
         var btn = document.getElementById('prompt-copy');
@@ -997,13 +1001,6 @@ document.addEventListener('DOMContentLoaded', function(){
     var s=document.getElementById('sidebar');if(s){s.classList.add('open');s.querySelector('.sidebar-toggle').textContent='◀';}
   }
   setTimeout(attachPromptClicks, 500);
-  // Auto-fetch if credentials are configured
-  setTimeout(function(){
-    var cfg = readFeishuConfig();
-    if (cfg && cfg.app_id && cfg.app_secret && cfg.app_token && cfg.table_id) {
-      refreshFromFeishu();
-    }
-  }, 800);
 });
 // Also attach after tab switch
 document.querySelectorAll('[name=scene], [name^=sub-]').forEach(function(r){
