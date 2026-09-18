@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
-<title>{{TITLE}} · 分镜全篇</title>
+<title>{{TITLE}}</title>
 <style>
 :root{--bg:#2b2b2b;--card:#222222;--border:#222222;--text:#e0e0e0;--head:#e0e0e0;--accent:#f43f5e;--green:#22c55e;--row-light:#3a3a3a;--row-dark:#333333}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -59,6 +59,31 @@ tr.has-prompt .c-num::before{content:'';display:inline-block;width:6px;height:6p
 .audio-sfx{color:#94a3b8;font-size:11px}
 .c-notes{color:var(--text);font-size:12px}
 .c-prompt{word-break:normal;white-space:pre-line;font-size:12px;line-height:1.5}
+
+/* ── 编辑浮动栏 ── */
+.edit-bar{display:none;position:sticky;top:0;z-index:50;background:var(--card);border-bottom:2px solid var(--accent);padding:8px 16px;justify-content:flex-end;gap:10px;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.edit-bar.show{display:flex}
+
+/* ── 节拍分析表 ── */
+.beat-decl{font-size:14px;color:var(--head);padding:12px 0 8px;font-weight:600}
+.beat-rhythm{font-size:13px;color:var(--text);padding:8px 0}
+.beat-estimate{font-size:14px;color:var(--accent);font-weight:700;padding:4px 0 16px}
+.beat-analysis-table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:13px;min-width:700px}
+.beat-analysis-table td,.beat-analysis-table th{padding:8px 6px;border-bottom:1px solid var(--border);vertical-align:top;word-break:break-word}
+.beat-analysis-table th{background:var(--card);color:var(--head);font-weight:600;font-size:12px;white-space:nowrap;border-bottom:2px solid var(--accent)}
+.beat-analysis-table tbody tr:nth-child(odd){background:var(--row-light)}
+.beat-analysis-table tbody tr:nth-child(even){background:var(--row-dark)}
+.beat-analysis-table tbody tr:hover{background:rgba(244,63,94,.12)}
+/* 外界动作+人物反应+说明 换行，其余不换 */
+.beat-analysis-table td:nth-child(1){white-space:nowrap}
+.beat-analysis-table td:nth-child(2){white-space:nowrap}
+.beat-analysis-table td:nth-child(3){white-space:normal;word-break:break-word}
+.beat-analysis-table td:nth-child(4){white-space:normal;word-break:break-word}
+.beat-analysis-table td:nth-child(5){white-space:nowrap}
+.beat-analysis-table td:nth-child(6){white-space:normal;word-break:break-word}
+.beat-analysis-table td:nth-child(7){white-space:nowrap}
+/* 列宽：外界动作+人物反应自动吃剩余 */
+col.c1-b{width:36px}col.c2-b{width:90px}col.c3-b{width:auto}col.c4-b{width:auto}col.c5-b{width:120px}col.c6-b{width:auto}col.c7-b{width:60px}
 
 /* ── 节拍属性标签 ── */
 .prop-tag{display:inline-block;padding:0 3px;border-radius:2px;font-size:10px;font-weight:700;line-height:16px;margin-right:2px;vertical-align:middle}
@@ -225,7 +250,7 @@ th{position:relative}
 <body>
 <div class="container">
 <header class="top">
-<h1>{{TITLE}} — <span>分镜全篇</span></h1>
+<h1>{{TITLE}}</h1>
 <div class="sub"><!-- 副标题 --></div>
 </header>
 
@@ -258,6 +283,11 @@ th{position:relative}
 <!-- Context Menu -->
 <div class="ctx-menu" id="ctx-menu" style="display:none">
 <div class="ctx-item" onclick="editCell()">编辑动作调度</div>
+</div>
+
+<!-- Beat Context Menu -->
+<div class="ctx-menu" id="ctx-menu-beat" style="display:none">
+<div class="ctx-item" onclick="editBeatRow()">编辑</div>
 </div>
 
 <!-- Settings Panel -->
@@ -634,15 +664,15 @@ function formatKongjian(text) {
 }
 function parsePromptBlocks(text) {
   // Style assignments: A=药丸(场景/人物), B=竖条(空间锚/镜头), C=微底(其余)
-  var headingRe = /^(@图片\\d+|场景|空间锚|人物|镜头[一二三四五六七八九十\\d]+|动作表演|拍摄方式|画面呈现|主光方位|视角|光线|调色|氛围|风格|风格块|时长|景别|焦段|景深|机位|运镜)[：:]/;
-  var styleMap = {'动作表演':'D','拍摄方式':'D','画面呈现':'D','主光方位':'D'};
+  var styleMap = {'空间关系':'D','画面动态':'D','动作表演':'D','拍摄方式':'D','画面呈现':'D','主光方位':'D'};
   var colors = {
-    '场景':'#f59e0b','空间锚':'#3b82f6','人物':'#10b981','镜头':'#a78bfa','动作表演':'#94a3b8','拍摄方式':'#94a3b8','画面呈现':'#94a3b8',
+    '场景':'#f59e0b','空间关系':'#94a3b8','空间锚':'#3b82f6','人物':'#10b981','道具':'#3b82f6','镜头':'#a78bfa','动作表演':'#94a3b8','拍摄方式':'#94a3b8','画面动态':'#94a3b8','画面呈现':'#94a3b8',
     '视角':'#10b981','光线':'#f59e0b','调色':'#ec4899',
     '氛围':'#8b5cf6','时长':'#6b7280','景别':'#f43f5e',
     '焦段':'#3b82f6','景深':'#10b981','机位':'#f59e0b',
     '运镜':'#a78bfa','风格':'#8b5cf6','风格块':'#22d3ee','主光方位':'#94a3b8','@图片':'#6b7280'
   };
+  var headingRe = /^(场景|空间关系|空间锚|人物|道具|镜头[一二三四五六七八九十\d]+|动作表演|拍摄方式|画面动态|画面呈现|主光方位|视角|光线|调色|氛围|风格|风格块|时长|景别|焦段|景深|机位|运镜)[：:\uff1a]/;
   var lines = text.split(/[\n\r]+/);
   var result = '';
   for (var i=0;i<lines.length;i++){
@@ -864,17 +894,21 @@ var _ctxRow = null;
 function showCtxMenu(e, row){
   e.preventDefault();
   _ctxRow = row;
-  var menu = document.getElementById("ctx-menu");
+  var inBeat = row.closest('[id^="beat-"]');
+  var menuId = inBeat ? "ctx-menu-beat" : "ctx-menu";
+  var otherId = inBeat ? "ctx-menu" : "ctx-menu-beat";
+  document.getElementById(otherId).style.display = "none";
+  var menu = document.getElementById(menuId);
   menu.style.display = "block";
   menu.style.left = e.clientX + "px";
   menu.style.top = e.clientY + "px";
 }
 function hideCtxMenu(){
-  var menu = document.getElementById("ctx-menu");
-  if (menu) menu.style.display = "none";
+  var m = document.getElementById("ctx-menu"); if(m) m.style.display = "none";
+  var mb = document.getElementById("ctx-menu-beat"); if(mb) mb.style.display = "none";
 }
 document.addEventListener("click", function(e){
-  if (!e.target.closest(".ctx-menu")) hideCtxMenu();
+  if (!e.target.closest(".ctx-menu") && !e.target.closest("#ctx-menu-beat")) hideCtxMenu();
 });
 
 function editCell(){
@@ -926,6 +960,104 @@ function editCell(){
   };
 }
 
+// ── Beat Row Editing State ──
+var _editState = null; // {cells, editCols, originals, textareas, rid}
+
+function editBeatRow(){
+  hideCtxMenu();
+  if (!_ctxRow) return;
+  if (_editState) { _editState.textareas[1].focus(); return; }
+  var cells = _ctxRow.querySelectorAll("td");
+  if (cells.length < 7) return;
+  var rid = _ctxRow.getAttribute("data-record-id");
+  if (!rid) { alert("请先点从飞书刷新"); return; }
+  
+  var editCols = [
+    {idx:1, field:"节拍名称"},
+    {idx:2, field:"外界动作"},
+    {idx:3, field:"人物反应"},
+    {idx:5, field:"说明"}
+  ];
+  var originals = {};
+  var textareas = {};
+  
+  editCols.forEach(function(c){
+    var td = cells[c.idx];
+    originals[c.idx] = td.textContent.trim();
+    td.textContent = "";
+    var ta = document.createElement("textarea");
+    ta.value = originals[c.idx];
+    ta.style.cssText = "width:100%;min-height:60px;background:var(--bg);color:var(--text);border:1px solid var(--accent);border-radius:4px;padding:6px;font:13px/1.5 sans-serif;resize:vertical;box-sizing:border-box";
+    td.appendChild(ta);
+    textareas[c.idx] = ta;
+  });
+  
+  _editState = {cells:cells, editCols:editCols, originals:originals, textareas:textareas, rid:rid};
+  
+  // Inject sticky edit bar into the active sub-content container
+  var container = _ctxRow.closest(".sub-content");
+  var bar = container.querySelector(".edit-bar");
+  if (!bar) {
+    bar = document.createElement("div");
+    bar.className = "edit-bar";
+    bar.innerHTML = '<button class="panel-btn edit-bar-cancel" style="background:var(--row-light);color:var(--text);border-color:var(--border)">取消</button><button class="panel-btn edit-bar-save">保存</button>';
+    bar.querySelector(".edit-bar-cancel").onclick = cancelEdit;
+    bar.querySelector(".edit-bar-save").onclick = saveEdit;
+    container.insertBefore(bar, container.firstChild);
+  }
+  bar.classList.add("show");
+  textareas[1].focus();
+}
+
+function cancelEdit(){
+  if (!_editState) return;
+  var s = _editState;
+  s.editCols.forEach(function(c){ s.cells[c.idx].textContent = s.originals[c.idx]; });
+  _editState = null;
+  var bar = s.cells[0].closest(".sub-content").querySelector(".edit-bar");
+  if (bar) bar.classList.remove("show");
+}
+
+function saveEdit(){
+  if (!_editState) return;
+  var s = _editState;
+  var saveBtn = document.querySelector(".edit-bar.show .edit-bar-save");
+  if (!saveBtn) return;
+  saveBtn.disabled = true; saveBtn.textContent = "保存中...";
+  
+  var cfg = JSON.parse(localStorage.getItem("feishu_cfg")||"{}");
+  if (!cfg.app_id) { alert("请先配置飞书API设置"); saveBtn.disabled = false; saveBtn.textContent = "保存"; return; }
+  
+  var fields = {};
+  s.editCols.forEach(function(c){ fields[c.field] = s.textareas[c.idx].value.trim(); });
+  
+  fetch("/api/feishu",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:"https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal",headers:{"Content-Type":"application/json"},body:{app_id:cfg.app_id,app_secret:cfg.app_secret}})})
+  .then(function(r){return r.json()}).then(function(td2){
+    var token = td2.tenant_access_token;
+    return fetch("/api/feishu",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:"https://open.feishu.cn/open-apis/bitable/v1/apps/"+cfg.app_token+"/tables/tbl9L7UG4kJ2nuSr/records/"+s.rid,headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},body:{fields:fields},_method:"PUT"})});
+  }).then(function(r){return r.json()}).then(function(d){
+    if (d.code===0){
+      s.editCols.forEach(function(c){ s.cells[c.idx].textContent = s.textareas[c.idx].value.trim(); });
+    } else {
+      s.editCols.forEach(function(c){ s.cells[c.idx].textContent = s.originals[c.idx]; });
+      alert("保存失败: "+(d.msg||""));
+    }
+    _editState = null;
+    var bar2 = s.cells[0].closest(".sub-content").querySelector(".edit-bar");
+    if (bar2) bar2.classList.remove("show");
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "保存"; }
+  }).catch(function(e){
+    s.editCols.forEach(function(c){ s.cells[c.idx].textContent = s.originals[c.idx]; });
+    alert("保存失败: "+e.message);
+    _editState = null;
+    var bar2 = s.cells[0].closest(".sub-content").querySelector(".edit-bar");
+    if (bar2) bar2.classList.remove("show");
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "保存"; }
+  });
+}
+
+
+
 
 function closePrompt() {
   var panel = document.getElementById('prompt-panel');
@@ -942,20 +1074,22 @@ function closePrompt() {
 }
 
 function attachPromptClicks() {
-  document.querySelectorAll('.scene-section .sub-content tbody tr').forEach(function(row){
-    var numCell = row.querySelector('.c-num');
-    if (!numCell || row.classList.contains('prompt-row')) return;
-    row.classList.add('prompt-row');
+  // Click → only v2 (prompt panel)
+  document.querySelectorAll('[id^="v2-"] tbody tr').forEach(function(row){
+    if (row.classList.contains("prompt-row")) return;
+    row.classList.add("prompt-row");
+    var numCell = row.querySelector(".c-num");
     var shotNum = numCell.textContent.trim();
-    row.setAttribute('data-shot', shotNum);
-    row.addEventListener('contextmenu', function(e){ showCtxMenu(e, row); });
-    row.addEventListener('click', function(e){
-      // Don't open prompt panel if clicking inside a textarea or context menu
-      if (e.target.closest('textarea') || e.target.closest('.ctx-menu') || e.target.closest('td:has(textarea)')) return;
-      // Clear previous clicked before setting new one
-      document.querySelectorAll('.prompt-row.clicked').forEach(function(r){r.classList.remove('clicked')});
+    row.setAttribute("data-shot", shotNum);
+    row.addEventListener("click", function(e){
+      if (e.target.closest("textarea") || e.target.closest(".ctx-menu") || e.target.closest("td:has(textarea)")) return;
+      document.querySelectorAll(".prompt-row.clicked").forEach(function(r){r.classList.remove("clicked")});
       openPrompt(shotNum, row);
     });
+  });
+  // Context menu → all rows (v2 + beat)
+  document.querySelectorAll('.scene-section .sub-content tbody tr').forEach(function(row){
+    row.addEventListener("contextmenu", function(e){ showCtxMenu(e, row); });
   });
 }
 

@@ -101,9 +101,62 @@ X 按钮 onclick 写 `closePrompt()`（不要复杂 inline）。`closePrompt()` 
 - Shell 转义地狱：Python 单引号嵌套时用 `'"'"'` 拼接法；复杂编辑先写 `.py` 文件再执行
 - 所有前端修改后必须重建：`python3 scripts/build_html.py`
 - **模板改了 build_html.py 也必须同步**——按钮、列、CSS 只在模板 JS 里加了但 build_html.py 没更新，静态 HTML 不会有
-- 避免往 `/tmp/` 写临时文件——被安全策略拦截
+- **禁止一切 `/tmp/` 写入**——`write_file`、Python 临时脚本、`node --check` 临时文件，全部禁止。临时文件用项目 `scripts/` 目录（如 `scripts/_check.js`），用完立即删除
 - 每次 JS 编辑后验证 `{` 和 `}` 数量相等
 - 浏览器缓存顽固——重启服务后用 `curl` 先验证文件已更新，再让用户 `Ctrl+Shift+R`
+
+### JS 模板正则转义陷阱（致命·2026-07实测）
+
+**症状：** 提示词面板渲染全部失效——只匹配到第一行标签，其余所有行（包括后续标签和正文）被塞进一个 div。行点击可打开面板但内容无样式。JS console 只有一个空 exception，无具体报错。
+
+**根因：** 模板文件中的 JS 正则字面量有错误的转义层级。`<script>` 标签内的正则 `/[\n\r]+/` 在模板文件中应写成 `[\\n\\r]`（HTML 文件中的一个反斜杠 = JS 中的一个转义字符）。但经过多次 `patch()` 编辑，反斜杠被叠为 `\\\\n`（四个反斜杠+n），在 HTML 中变成 `\\n`，JS 将其解释为**字面反斜杠后跟 n**，而非换行符。
+
+**影响范围：** `headingRe` 中的 `\d`、`\uff1a`，`text.split()` 中的 `\n`、`\r`，`dm` 回退正则中的 `\s`——全部失效。`split(/[\\n\\r]+/)` 将整段提示词当作一行处理。
+
+**验证方法：** 
+```bash
+# 检查模板文件的反斜杠数量（应为一个）
+python3 -c "
+with open('templates/feishu-backed.html','rb') as f:
+    c = f.read()
+import re
+# 查找 JS 正则中的反斜杠模式
+for m in re.finditer(rb'\\\\[dnrs]', c):
+    print(f'DOUBLE backslash at byte {m.start()}: {c[m.start():m.start()+10]}')
+"
+```
+正常输出应为空。任何输出都表示反斜杠被叠了。
+
+**修复：** 用字节级替换，不能用 `patch()` 或 `skill_manage`——它们的字符串处理会再次转义：
+```bash
+python3 << 'PYEOF'
+with open('templates/feishu-backed.html', 'rb') as f:
+    content = f.read()
+content = content.replace(b'\\\\d', b'\\d')    # \\d → \d
+content = content.replace(b'\\\\n', b'\\n')    # \\n → \n
+content = content.replace(b'\\\\r', b'\\r')    # \\r → \r
+content = content.replace(b'\\\\s', b'\\s')    # \\s → \s
+content = content.replace(b'\\\\uff1a', b'\\uff1a')
+with open('templates/feishu-backed.html', 'wb') as f:
+    f.write(content)
+PYEOF
+# 改完立即重建验证
+python3 scripts/build_html.py
+```
+
+### 提示词面板标签注册清单
+
+新增或改名提示词标签时，必须在 `feishu-backed.html` 的 `parsePromptBlocks()` 中同步更新三张表，缺一不可：
+
+| 表 | 变量 | 作用 | 遗漏后果 |
+|:---|:---|:---|:---|
+| 匹配正则 | `headingRe` | 识别行首 `标签：` 或 `标签：` 模式 | 标签行被当正文，无样式 |
+| 样式映射 | `styleMap` | 指定渲染风格（A药丸/B竖条/C微底/D灰标） | 使用默认 C 风格，可能视觉不一致 |
+| 颜色映射 | `colors` | 标签徽标的文字颜色 | 回退灰色 `#6b7280` |
+
+**`@图片` 渲染规则（2026-07 更新）：** `@图片` 行**不作为标题渲染**——已从 `headingRe` 匹配项和回退逻辑中完全移除。`@图片 — 男人...` 和 `@图片 — 游戏币...` 在面板中显示为无徽标的正文行。设计理由：@ 是给生图模型看的占位标记，在提示词面板中不需要视觉突出。
+
+**`styleMap` 默认值：** 不在 `styleMap` 中的标签走 `||'C'` 回退，使用 `prompt-line-c` + `prompt-badge-c` 样式（彩色圆点徽标）。共享声明区标签（人物/场景/道具/镜头N/风格块）均使用此默认风格。D-style（`prompt-line-d`）专用于五行镜头标签。
 
 ## 一键生成提示词
 
@@ -118,6 +171,34 @@ X 按钮 onclick 写 `closePrompt()`（不要复杂 inline）。`closePrompt()` 
 ## 右键菜单（ctx-menu）
 
 `contextmenu` 事件弹出（`e.preventDefault()`），`position:fixed`。在 td 内插 textarea + 保存/取消按钮，按钮必须 `e.stopPropagation()`。
+
+### 按表类型分发
+
+节拍分析表和分镜表共用 `attachPromptClicks` 的事件绑定。右键菜单通过容器 ID 前缀判断表类型：
+
+```js
+var inBeat = row.closest('[id^="beat-"]');
+var menuId = inBeat ? "ctx-menu-beat" : "ctx-menu";
+```
+
+- `#beat-{sid}` 内的行 → 显示节拍菜单（「编辑」→ 整行 4 列变 textarea）
+- `#v2-{sid}` 内的行 → 显示分镜菜单（「编辑动作调度」）
+
+两个菜单各一个 `<div class="ctx-menu">`，`showCtxMenu` 切换显示，`hideCtxMenu` 同时隐藏两个。点击外部关闭需覆盖两种菜单 class。
+
+### 整行编辑（editBeatRow）
+
+节拍行右键「编辑」→ 整行可编辑列（节拍名称/外界动作/人物反应/说明）同时变 textarea，一个保存按钮提交全部字段。`fields` 对象一次 PUT 到飞书分析表（`tbl9L7UG4kJ2nuSr`）。取消恢复全部原始值。注意：节拍分析表行必须有 `data-record-id` 属性（`build_beat_analysis_html` 中从 `r.get('record_id')` 取值）。
+
+### 双表写入区分
+
+`editCell`（分镜表）用 `cfg.table_id`，`editBeatRow`（分析表）硬编码 `tbl9L7UG4kJ2nuSr`。两者都走 `/api/feishu` 代理。
+
+## 节拍分析表 CSS
+
+分析表使用独立 class `beat-analysis-table`，不和分镜表共享样式。列宽：前两列固定（36px/90px），类型和闭环固定（120px/60px），外界动作/人物反应/说明三个弹性列 `width:auto` 平分剩余空间。弹性列 `white-space:normal;word-break:break-word` 自动换行，固定列 `nowrap`。
+
+节拍分析表头部区：`.beat-decl`（场景价值+视点角色）、`.beat-rhythm`（节奏曲线）、`.beat-estimate`（预估镜头数）。占位文案：无分析数据时显示「分析数据待导入」。
 
 ## 内联编辑器事件隔离
 
@@ -150,6 +231,16 @@ X 按钮 onclick 写 `closePrompt()`（不要复杂 inline）。`closePrompt()` 
 ## 多场景支持（单页多场）
 
 页面通过两层 Tab 切换场次（价值弧线 + s010/s020/...）。CSS 和 JS 均需场景化，禁止硬编码 `s010`。
+
+### 重构审计方法论（先审计再动手，按风险排序）
+
+面对前端硬编码场景化改造时，不要逐行改逐行测——效率低且容易遗漏。正确流程：
+
+1. **全量审计：** 搜索所有硬编码引用（CSS ID、JS 选择器、Python 变量），列出完整清单，每条标注位置和改动方向
+2. **风险分级：** 按「静默失败（不报错但无响应）> 可见错误 > 机械替换」三级排序。静默失败（如点击无响应、数据灌错容器）最高优先级
+3. **按序执行：** 低风险机械替换 → CSS 占位符 → JS 选择器场景化 → 事件重绑定。每完成一类验证一类
+4. **node --check 验证：** 每次 JS 改动后立即提取 script 块跑 `node --check`，不要等到浏览器测试才发现语法错误
+5. **功能审计验证：** 改动完成后列出全部前端功能清单，逐项在浏览器 console 验证 `typeof` 确认函数存在、`querySelectorAll` 确认元素被绑定
 
 ### CSS 占位符系统
 
@@ -188,3 +279,31 @@ JS 端新增 `scene` 字段（从飞书 `场次` 列读取），`refreshFromFeis
 ### 文件名保持兼容
 
 输出文件名仍为 `s010_feishu_backed.html`（历史 URL 不变），内容已支持多场次。
+
+### 子 Tab CSS 生成铁律（display 与 label 必须分两组）
+
+`build_html.py` 生成子 Tab CSS 时，`display:block` 规则和 label 高亮选择器**不能混在同一个 list 里**。前者是独立完整规则，后者是逗号拼接的一组 selector 共享一个规则体。
+
+混在一起的后果：display 规则被逗号打断，label 高亮只作用最后一行的 selector。
+
+**正确做法：** 两个独立 list，display 在前、label 在后：
+```python
+sub_display_lines = []
+sub_label_lines = []
+for sub in ['beat', 'v2']:
+    sub_display_lines.append('#sub-{sub}-{sid}:checked~#{sub}-{sid}{{display:block}}')
+    sub_label_lines.append('#sub-{sub}-{sid}:checked~.sub-tabs label[for=sub-{sub}-{sid}],')
+sub_tab_css = "\n".join(sub_display_lines) + "\n" + "\n".join(sub_label_lines).rstrip(',') + "\n{...}"
+```
+
+### /tmp 写入禁令
+
+**禁止一切 `/tmp/` 写入**——`write_file`、Python 临时脚本、`node --check` 临时文件，全部禁止。临时文件用项目 `scripts/` 目录（如 `scripts/_check.js`），用完立即删除。安全策略拦截 `/tmp` 写入不是偶然——它是硬规则。
+
+### attachPromptClicks 选择器优化
+
+不要用 `.scene-section .sub-content tbody tr`（会选中节拍表行），直接用 `[id^="v2-"] tbody tr`。节拍表行完全免疫，零 DOM 上行遍历。
+
+### editBar 粘性编辑栏
+
+编辑节拍行时，浮动编辑栏用 `position:sticky;top:0` 放在表头上方，而非页面底部——和 textarea 编辑区零距离。`display:none` 默认隐藏，编辑时 `.show` 类切换。Dynamically 注入到 `.sub-content` 容器内，每个场次独立一个实例。保存按钮用 `document.querySelector(".edit-bar.show .edit-bar-save")` 而非 `getElementById`（动态创建的 bar class 不是 id）。

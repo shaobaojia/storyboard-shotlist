@@ -79,6 +79,16 @@ HTML 渲染时按 `beat序号` 分组：
 
 外界动作和人物反应是一个完整叙述（`领导咆哮 → 他移开手机绷紧`），拆成两列反而割裂。一个「节拍动作」文本字段，用 `→` 分隔，HTML 里自然渲染成两段。设计意图不存数据库，从模块1分析报告引用。
 
+## 分析表（模块1 节拍分析）
+
+同一应用内第二张表（`analysis_table_id`），与分镜表通过 `场次` 字段 JOIN。18 字段覆盖模块1 全部输出：节拍表 + 场景价值声明 + 节奏曲线 + 预估镜头数。
+
+**表结构：** `场次`(text) / `场景价值`(text) / `起点极`(text) / `终点极`(text) / `翻转`(text) / `视点角色`(text) / `节拍序号`(number) / `节拍名称`(text) / `外界动作`(text) / `人物反应`(text) / `类型`(select: 🔴戏点/🟡空间建立/⚪填充) / `闭环`(select: ✅/⚠️未闭环) / `说明`(text) / `节奏段落`(number) / `节奏描述`(text) / `情绪温度`(number) / `节奏密度`(select: 慢/中/快) / `预估总镜头数`(number)
+
+**前端渲染：** `build_html.py` 拉两张表 → 按场次 JOIN → 每场 scene section 下生成两个子 Tab：`节拍分析`（beat 子 Tab，默认不选中，手动切换）+ `v2 分镜`（默认选中）。CSS 占位符系统自动为 beat 子 Tab 生成 `#sub-beat-{sid}` 规则。
+
+**建表能力：** 飞书 API `app_id/app_secret` 授权整个应用——可创建表（`POST /bitable/v1/apps/{app_token}/tables`）、加字段（`POST .../tables/{table_id}/fields`）、删表。无需额外权限。`feishu_config.json` 中的 `analysis_table_id` 记录分析表 ID。
+
 ## Why Proxy (Not Direct Fetch)
 
 Feishu OpenAPI does NOT return CORS headers (confirmed via `curl -X OPTIONS`). Any browser JS call to `open.feishu.cn` is blocked. Proxy runs on NAS, same-origin for HTML, forwards server-side.

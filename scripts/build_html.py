@@ -22,7 +22,8 @@ APP_ID = os.environ.get("FEISHU_APP_ID", "cli_aa9045b4afb85be9")
 APP_SECRET = os.environ.get("FEISHU_APP_SECRET", "")
 APP_TOKEN = os.environ.get("FEISHU_APP_TOKEN", "OwBSbEQS5aY9HksVVBYcYUnVnlg")
 TABLE_ID = os.environ.get("FEISHU_TABLE_ID", "tbl2gBoybDUPpPz2")
-TITLE = os.environ.get("FEISHU_TITLE", "电玩城的大小孩")
+ANALYSIS_TABLE_ID = os.environ.get("FEISHU_ANALYSIS_TABLE_ID", "tbl9L7UG4kJ2nuSr")
+TITLE = os.environ.get("FEISHU_TITLE", "测试列表")
 
 JIWEI_SHORT = {
     "🔴 正打": "🔴正",
@@ -163,6 +164,89 @@ def build_shot_row(shot):
         摄影机=sheyingji, 机位=JIWEI_SHORT.get(shot.get("机位",""), shot.get("机位","")), 动作调度=shot.get("动作调度",""),
         台词=taici_html, 时长=dur_disp, 音频=audio_html, 导演备注=shot.get("导演备注",""), 提示词=tishici)
 
+def fetch_analysis_records(token, app_token, table_id):
+    """Fetch analysis records from the analysis bitable."""
+    import subprocess
+    all_records = []
+    page_token = None
+    while True:
+        url = f"https://open.feishu.cn/open-apis/bitable/v1/apps/{app_token}/tables/{table_id}/records?page_size=50"
+        if page_token:
+            url += f"&page_token={page_token}"
+        r = subprocess.run(["curl", "-s", url, "-H", f"Authorization: Bearer {token}"],
+                           capture_output=True, text=True)
+        data = json.loads(r.stdout)
+        if data.get("code") != 0:
+            break
+        items = data.get("data", {}).get("items", [])
+        all_records.extend(items)
+        if not data.get("data", {}).get("has_more"):
+            break
+        page_token = data.get("data", {}).get("page_token")
+    return all_records
+
+def build_beat_analysis_html(records, scene_id):
+    """Build beat analysis table HTML for one scene."""
+    if not records:
+        return '<div class="placeholder-scene">分析数据待导入</div>'
+    
+    # Sort by beat number
+    records.sort(key=lambda r: int(float(normalize(r.get("fields", {}).get("节拍序号", "0")))) if normalize(r.get("fields", {}).get("节拍序号", "")) else 0)
+    
+    # Extract scene value declaration
+    first = records[0].get("fields", {})
+    scene_value = normalize(first.get("场景价值", ""))
+    viewpoint = normalize(first.get("视点角色", ""))
+    
+    rows = []
+    for r in records:
+        f = r.get("fields", {})
+        btype = normalize(f.get("类型", ""))
+        beat_num = str(int(float(normalize(f.get("节拍序号", "0"))))) if normalize(f.get("节拍序号", "")) else ""
+        rid = r.get('record_id', '')
+        row = '<tr data-record-id="' + rid + '">'
+        row += '<td class="c-num">' + beat_num + '</td>'
+        row += '<td>' + normalize(f.get("节拍名称", "")) + '</td>'
+        row += '<td class="c-notes">' + normalize(f.get("外界动作", "")) + '</td>'
+        row += '<td>' + normalize(f.get("人物反应", "")) + '</td>'
+        row += '<td>' + btype + '</td>'
+        row += '<td class="c-notes">' + normalize(f.get("说明", "")) + '</td>'
+        row += '<td>' + normalize(f.get("闭环", "")) + '</td>'
+        row += '</tr>'
+        rows.append(row)
+    
+    # Rhythm curve
+    rhythm_parts = []
+    for r in records:
+        f = r.get("fields", {})
+        sec = normalize(f.get("节奏段落", ""))
+        desc = normalize(f.get("节奏描述", ""))
+        temp = normalize(f.get("情绪温度", ""))
+        density = normalize(f.get("节奏密度", ""))
+        if sec and desc:
+            rhythm_parts.append("段落" + sec + "：" + desc + "（情绪" + temp + "/10，节奏" + density + "）")
+    
+    # Estimate
+    estimate = ""
+    for r in records:
+        est = normalize(r.get("fields", {}).get("预估总镜头数", ""))
+        if est:
+            estimate = est
+            break
+    
+    decl = '<div class="beat-decl">场景价值：' + scene_value + ' &nbsp;|&nbsp; 视点角色：' + viewpoint + '</div>' if scene_value else ''
+    estimate_html = '<div class="beat-estimate">预估总镜头数：' + estimate + ' 镜</div>' if estimate else ''
+    rhythm_html = '<div class="beat-rhythm">' + " | ".join(rhythm_parts) + '</div>' if rhythm_parts else ''
+    
+    html = decl
+    html += '<div class="table-wrap"><table class="beat-analysis-table">'
+    html += '<colgroup><col class="c1-b"><col class="c2-b"><col class="c3-b"><col class="c4-b"><col class="c5-b"><col class="c6-b"><col class="c7-b"></colgroup>'
+    html += '<thead><tr><th>#</th><th>节拍</th><th>外界动作</th><th>人物反应</th><th>类型</th><th>说明</th><th>闭环</th></tr></thead>'
+    html += '<tbody>' + "".join(rows) + '</tbody>'
+    html += '</table></div>'
+    html += rhythm_html + estimate_html
+    return html
+
 def build_beat_table(shots):
     """Build beat-grouped table HTML for one scene's shots."""
     beats = OrderedDict()
@@ -196,7 +280,7 @@ def build_beat_table(shots):
     
     return "\n".join(beat_blocks)
 
-def build_one_scene_section(shots, scene_id):
+def build_one_scene_section(shots, scene_id, analysis_data=None):
     """Build one scene's section HTML (info bar + beat table)."""
     sname = SCENE_NAMES.get(scene_id, scene_id)
     total_shots = len(shots)
@@ -206,22 +290,28 @@ def build_one_scene_section(shots, scene_id):
         sid=scene_id, sname=sname, shots=total_shots, min=int(total_dur//60), sec=int(total_dur%60))
     
     v2_table = build_beat_table(shots)
+    beat_records = analysis_data.get(scene_id, []) if analysis_data else []
+    beat_analysis = build_beat_analysis_html(beat_records, scene_id)
     
     return '''<section id="{sid}-section" class="scene-section">
 
 <input type="radio" name="sub-{sid}" id="sub-v2-{sid}" checked>
+<input type="radio" name="sub-{sid}" id="sub-beat-{sid}">
 <nav class="sub-tabs">
+<label for="sub-beat-{sid}">节拍分析</label>
 <label for="sub-v2-{sid}">v2 分镜</label>
 </nav>
+
+<div id="beat-{sid}" class="sub-content">{beat_analysis}</div>
 
 <div class="info-bar">{info}</div>
 
 <div id="v2-{sid}" class="sub-content">{table}</div>
 
-</section>'''.format(sid=scene_id, info=info_bar, table=v2_table)
+</section>'''.format(sid=scene_id, beat_analysis=beat_analysis, info=info_bar, table=v2_table)
 
 # ── Step 3: Assemble HTML ──
-def build_html(scenes, title=TITLE):
+def build_html(scenes, title=TITLE, analysis_data=None):
     """Build complete multi-scene HTML.
     
     Args:
@@ -248,22 +338,24 @@ def build_html(scenes, title=TITLE):
     # Scene sections
     sections = [arc_section]
     for sid in scene_ids:
-        sections.append(build_one_scene_section(scenes[sid], sid))
+        sections.append(build_one_scene_section(scenes[sid], sid, analysis_data))
     scene_sections_html = "\n".join(sections)
     
     # Generate scene-specific CSS rules
     scene_css_lines = []
     tab_active_lines = ['#scene-arc:checked~.scene-tabs label[for=scene-arc],']
-    sub_tab_lines = []
+    sub_display_lines = []
+    sub_label_lines = []
     for sid in scene_ids:
         scene_css_lines.append('#scene-{sid}:checked~#{sid}-section{{display:block}}'.format(sid=sid))
         tab_active_lines.append('#scene-{sid}:checked~.scene-tabs label[for=scene-{sid}],'.format(sid=sid))
-        for sub in ['v2']:  # expand when adding v1/beat tabs
-            sub_tab_lines.append('#sub-{sub}-{sid}:checked~#{sub}-{sid}{{display:block}}'.format(sub=sub, sid=sid))
-            sub_tab_lines.append('#sub-{sub}-{sid}:checked~.sub-tabs label[for=sub-{sub}-{sid}],'.format(sub=sub, sid=sid))
-    # Remove trailing comma from last line, add the rule body
+        for sub in ['beat', 'v2']:
+            sub_display_lines.append('#sub-{sub}-{sid}:checked~#{sub}-{sid}{{display:block}}'.format(sub=sub, sid=sid))
+            sub_label_lines.append('#sub-{sub}-{sid}:checked~.sub-tabs label[for=sub-{sub}-{sid}],'.format(sub=sub, sid=sid))
+    # scene tab active highlight
     tab_active_css = "\n".join(tab_active_lines).rstrip(',') + "\n{border-bottom-color:var(--accent);color:var(--head)}"
-    sub_tab_css = "\n".join(sub_tab_lines).rstrip(',') + "\n{border-bottom-color:var(--accent);color:var(--head)}"
+    # sub-tab: display rules first, then label highlight grouped
+    sub_tab_css = "\n".join(sub_display_lines) + "\n" + "\n".join(sub_label_lines).rstrip(',') + "\n{border-bottom-color:var(--accent);color:var(--head)}"
     scene_css = "\n".join(scene_css_lines)
     
     # Load template
@@ -295,7 +387,21 @@ if __name__ == "__main__":
         print("ERROR: No scene data found")
         exit(1)
     
-    html = build_html(scenes)
+    # Fetch analysis data
+    analysis_records = fetch_analysis_records(token, APP_TOKEN, ANALYSIS_TABLE_ID)
+    analysis_by_scene = OrderedDict()
+    for r in analysis_records:
+        sid = normalize(r.get("fields", {}).get("场次", ""))
+        if sid not in analysis_by_scene:
+            analysis_by_scene[sid] = []
+        analysis_by_scene[sid].append(r)
+    
+    # Merge analysis-only scenes into scenes dict (for Tab generation)
+    for sid in analysis_by_scene:
+        if sid not in scenes:
+            scenes[sid] = []
+    
+    html = build_html(scenes, analysis_data=analysis_by_scene)
     
     total_shots = sum(len(v) for v in scenes.values())
     out = "/volume1/主目录/Hermes/read/done/s010_feishu_backed.html"  # multi-scene, keep legacy filename
